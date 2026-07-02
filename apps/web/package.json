@@ -1,0 +1,26 @@
+{
+  "name": "@corsica/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "clean": "rimraf .next dist coverage",
+    "dev": "next dev --port 3000",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@corsica/api-client": "workspace:*",
+    "@corsica/assets": "workspace:*",
+    "@corsica/contracts": "workspace:*",
+    "@corsica/ui": "workspace:*",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3"
+  }
+}

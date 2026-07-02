@@ -1,0 +1,20 @@
+.separator {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  height: 18px;
+  justify-content: center;
+}
+
+.line {
+  background: var(--color-border);
+  flex: 1;
+  height: 1px;
+}
+
+.label {
+  color: var(--color-muted);
+  font-size: 11px;
+  letter-spacing: 0;
+  line-height: 14px;
+}

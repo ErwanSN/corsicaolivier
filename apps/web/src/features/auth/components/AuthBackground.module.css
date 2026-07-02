@@ -1,0 +1,27 @@
+.background {
+  background: var(--color-surface-inverse);
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  z-index: 0;
+}
+
+.picture {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.image {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .image {
+    object-position: center center;
+  }
+}

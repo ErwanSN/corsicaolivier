@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  "@prisma/engines": true
+  lefthook: true
+  msgpackr-extract: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
