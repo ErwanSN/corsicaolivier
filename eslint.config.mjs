@@ -5,6 +5,7 @@ import promise from "eslint-plugin-promise";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactNative from "eslint-plugin-react-native";
+import sonarjs from "eslint-plugin-sonarjs";
 import unicorn from "eslint-plugin-unicorn";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -59,6 +60,7 @@ export default tseslint.config(
     plugins: {
       "import-x": importX,
       promise,
+      sonarjs,
       unicorn
     },
     rules: {
@@ -72,10 +74,21 @@ export default tseslint.config(
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/no-unnecessary-condition": "error",
       "@typescript-eslint/prefer-readonly": "error",
+      complexity: ["error", { max: 10 }],
       "import-x/consistent-type-specifier-style": ["error", "prefer-inline"],
+      "max-depth": ["error", { max: 3 }],
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": [
+        "error",
+        { IIFEs: true, max: 100, skipBlankLines: true, skipComments: true }
+      ],
+      "max-nested-callbacks": ["error", { max: 3 }],
+      "max-params": ["error", { max: 4 }],
+      "max-statements": ["error", { max: 20 }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "promise/catch-or-return": "error",
       "promise/no-return-wrap": "error",
+      "sonarjs/cognitive-complexity": ["error", 15],
       "unicorn/filename-case": [
         "error",
         {
@@ -88,6 +101,14 @@ export default tseslint.config(
       ],
       "unicorn/no-null": "off",
       "unicorn/prevent-abbreviations": "off"
+    }
+  },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "max-lines-per-function": "off",
+      "max-nested-callbacks": ["error", { max: 5 }],
+      "max-statements": "off"
     }
   },
   {

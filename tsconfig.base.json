@@ -17,6 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "paths": {
       "@corsica/api-client": ["packages/api-client/src/index.ts"],
       "@corsica/assets": ["packages/assets/src/index.ts"],
