@@ -1,6 +1,5 @@
-import { getApiClientErrorMessage } from "@corsica/api-client";
-import { useRef, useState } from "react";
-import { Pressable, ScrollView, StatusBar, StyleSheet, type TextInput, View } from "react-native";
+import { useRef } from "react";
+import { ScrollView, StatusBar, StyleSheet, type TextInput, View } from "react-native";
 
 import { AppButton } from "../../../components/ui/AppButton";
 import { AppText } from "../../../components/ui/AppText";
@@ -9,6 +8,9 @@ import { GoogleMark } from "../../../components/ui/GoogleMark";
 import { Separator } from "../../../components/ui/Separator";
 import { theme } from "../../../design-system/theme";
 import { type AuthFormMode, type AuthSubmitHandler } from "../auth.types";
+import { useAuthForm } from "../use-auth-form";
+import { AuthFormHeader } from "./AuthFormHeader";
+import { AuthModeSwitchRow } from "./AuthModeSwitchRow";
 
 export type AuthFormScreenProps = Readonly<{
   mode: AuthFormMode;
@@ -21,18 +23,12 @@ const copyByMode = {
   createAccount: {
     loadingLabel: "Création...",
     passwordContentType: "newPassword",
-    submitLabel: "Créer un compte",
-    switchLabel: "Se connecter",
-    switchMode: "signIn",
-    switchPrefix: "Déjà un compte ?"
+    submitLabel: "Créer un compte"
   },
   signIn: {
     loadingLabel: "Connexion...",
     passwordContentType: "password",
-    submitLabel: "Se connecter",
-    switchLabel: "Créer un compte",
-    switchMode: "createAccount",
-    switchPrefix: "Pas encore de compte ?"
+    submitLabel: "Se connecter"
   }
 } as const satisfies Record<
   AuthFormMode,
@@ -40,64 +36,19 @@ const copyByMode = {
     loadingLabel: string;
     passwordContentType: "newPassword" | "password";
     submitLabel: string;
-    switchLabel: string;
-    switchMode: AuthFormMode;
-    switchPrefix: string;
   }>
 >;
 
 export function AuthFormScreen({ mode, onBack, onSubmit, onSwitchMode }: AuthFormScreenProps) {
   const copy = copyByMode[mode];
   const passwordInputRef = useRef<TextInput>(null);
-  const [email, setEmail] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [password, setPassword] = useState("");
-
-  async function handleSubmit(): Promise<void> {
-    if (password.length < 8) {
-      setErrorMessage("Le mot de passe doit contenir au moins 8 caractères.");
-      return;
-    }
-
-    setErrorMessage(null);
-    setIsSubmitting(true);
-
-    try {
-      await onSubmit({
-        email,
-        password
-      });
-    } catch (error) {
-      setErrorMessage(getApiClientErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+  const form = useAuthForm(onSubmit);
 
   return (
     <View style={styles.root}>
       <StatusBar backgroundColor={theme.colors.background} barStyle="dark-content" />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Retour à l'accueil"
-          accessibilityRole="button"
-          hitSlop={theme.hitSlop.control}
-          onPress={onBack}
-          style={styles.closeButton}
-        >
-          <AppText align="center" style={styles.closeGlyph} variant="body">
-            ×
-          </AppText>
-        </Pressable>
-
-        <AppText align="center" numberOfLines={1} style={styles.headerTitle} variant="controlLarge">
-          Connexion ou inscription
-        </AppText>
-
-        <View style={styles.headerSpacer} />
-      </View>
+      <AuthFormHeader onBack={onBack} />
 
       <ScrollView
         automaticallyAdjustKeyboardInsets
@@ -115,48 +66,53 @@ export function AuthFormScreen({ mode, onBack, onSubmit, onSwitchMode }: AuthFor
               <FormTextField
                 autoCapitalize="none"
                 autoCorrect={false}
-                editable={!isSubmitting}
+                editable={!form.isSubmitting}
                 fieldPosition="first"
                 inputMode="email"
                 keyboardType="email-address"
-                onChangeText={setEmail}
+                onChangeText={form.setEmail}
                 onSubmitEditing={() => {
                   passwordInputRef.current?.focus();
                 }}
                 placeholder="Email"
                 returnKeyType="next"
                 textContentType="emailAddress"
-                value={email}
+                value={form.email}
               />
               <FormTextField
                 ref={passwordInputRef}
                 autoCapitalize="none"
                 autoCorrect={false}
-                editable={!isSubmitting}
+                editable={!form.isSubmitting}
                 fieldPosition="last"
-                onChangeText={setPassword}
+                onChangeText={form.setPassword}
                 onSubmitEditing={() => {
-                  void handleSubmit();
+                  void form.submit();
                 }}
                 placeholder="Mot de passe"
                 returnKeyType="done"
                 secureTextEntry
                 textContentType={copy.passwordContentType}
-                value={password}
+                value={form.password}
               />
             </View>
 
-            {errorMessage ? (
-              <AppText tone="danger" variant="caption">
-                {errorMessage}
+            {form.errorMessage ? (
+              <AppText
+                accessibilityLiveRegion="polite"
+                accessibilityRole="alert"
+                tone="danger"
+                variant="caption"
+              >
+                {form.errorMessage}
               </AppText>
             ) : null}
 
             <AppButton
-              disabled={isSubmitting}
-              label={isSubmitting ? copy.loadingLabel : copy.submitLabel}
+              disabled={form.isSubmitting}
+              label={form.isSubmitting ? copy.loadingLabel : copy.submitLabel}
               onPress={() => {
-                void handleSubmit();
+                void form.submit();
               }}
               size="large"
               variant="brand"
@@ -173,22 +129,7 @@ export function AuthFormScreen({ mode, onBack, onSubmit, onSwitchMode }: AuthFor
             variant="outline"
           />
 
-          <View style={styles.switchRow}>
-            <AppText align="center" tone="muted" variant="control">
-              {copy.switchPrefix}
-            </AppText>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={theme.hitSlop.control}
-              onPress={() => {
-                onSwitchMode(copy.switchMode);
-              }}
-            >
-              <AppText align="center" style={styles.switchLabel} variant="control">
-                {copy.switchLabel}
-              </AppText>
-            </Pressable>
-          </View>
+          <AuthModeSwitchRow mode={mode} onSwitchMode={onSwitchMode} />
         </View>
       </ScrollView>
     </View>
@@ -196,17 +137,6 @@ export function AuthFormScreen({ mode, onBack, onSubmit, onSwitchMode }: AuthFor
 }
 
 const styles = StyleSheet.create({
-  closeButton: {
-    alignItems: "center",
-    borderRadius: theme.radii.pill,
-    height: 38,
-    justifyContent: "center",
-    width: 38
-  },
-  closeGlyph: {
-    fontSize: 26,
-    lineHeight: 30
-  },
   content: {
     flexGrow: 1,
     paddingBottom: theme.spacing[8],
@@ -220,21 +150,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing[4],
     width: "100%"
   },
-  header: {
-    alignItems: "center",
-    borderBottomColor: theme.colors.border,
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    minHeight: 64,
-    paddingHorizontal: theme.spacing[4]
-  },
-  headerSpacer: {
-    height: 38,
-    width: 38
-  },
-  headerTitle: {
-    flex: 1
-  },
   panel: {
     gap: theme.spacing[6],
     width: "100%"
@@ -242,17 +157,6 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: theme.colors.background,
     flex: 1
-  },
-  switchLabel: {
-    color: theme.colors.foreground,
-    textDecorationLine: "underline"
-  },
-  switchRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing[2],
-    justifyContent: "center"
   },
   title: {
     fontSize: 22,
