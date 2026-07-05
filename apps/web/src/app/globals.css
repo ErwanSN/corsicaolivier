@@ -1,12 +1,4 @@
 :root {
-  --color-brand: #d3222a;
-  --color-background: #ffffff;
-  --color-border: #e6e6e6;
-  --color-foreground: #000000;
-  --color-muted: #b8b8b8;
-  --color-overlay: rgba(0, 0, 0, 0.42);
-  --color-surface: #ffffff;
-  --color-surface-inverse: #000000;
   --font-sans: var(--font-inter), Inter, Arial, sans-serif;
   color-scheme: light;
 }
@@ -31,4 +23,16 @@ input {
 
 button {
   cursor: pointer;
+}
+
+.visually-hidden {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }

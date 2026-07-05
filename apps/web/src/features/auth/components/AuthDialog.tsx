@@ -1,11 +1,10 @@
 "use client";
 
-import { type AuthSessionDto } from "@corsica/contracts";
-import { type MouseEvent, useCallback, useEffect, useState } from "react";
+import { type MouseEvent, type SyntheticEvent, useCallback, useEffect, useRef } from "react";
 
 import { apiClient } from "../../../lib/api-client";
-import { clearStoredAuthSession, readStoredAccessToken, storeAuthSession } from "../auth-storage";
 import { type AuthFormMode, type AuthSubmitHandler } from "../auth.types";
+import { useStoredAuthSession } from "../use-stored-auth-session";
 import { AuthFormPanel } from "./AuthFormPanel";
 import { AuthSessionCard } from "./AuthSessionCard";
 import styles from "./AuthDialog.module.css";
@@ -37,8 +36,13 @@ const switchCopyByMode = {
 >;
 
 export function AuthDialog({ mode, onClose, onModeChange }: AuthDialogProps) {
-  const [session, setSession] = useState<AuthSessionDto | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const { clearSession, saveSession, session } = useStoredAuthSession();
   const switchCopy = switchCopyByMode[mode];
+
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -49,52 +53,6 @@ export function AuthDialog({ mode, onClose, onModeChange }: AuthDialogProps) {
     };
   }, []);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function hydrateSession(): Promise<void> {
-      const storedAccessToken = readStoredAccessToken();
-
-      if (!storedAccessToken) {
-        return;
-      }
-
-      try {
-        const user = await apiClient.me(storedAccessToken);
-
-        if (isActive) {
-          setSession({
-            accessToken: storedAccessToken,
-            tokenType: "Bearer",
-            user
-          });
-        }
-      } catch {
-        clearStoredAuthSession();
-      }
-    }
-
-    void hydrateSession();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
   const handleAuthSubmit = useCallback<AuthSubmitHandler>(
     async (credentials) => {
       const nextSession =
@@ -102,70 +60,68 @@ export function AuthDialog({ mode, onClose, onModeChange }: AuthDialogProps) {
           ? await apiClient.register(credentials)
           : await apiClient.login(credentials);
 
-      storeAuthSession(nextSession);
-      setSession(nextSession);
+      saveSession(nextSession);
     },
-    [mode]
+    [mode, saveSession]
   );
 
-  const handleLogout = useCallback(() => {
-    clearStoredAuthSession();
-    setSession(null);
-  }, []);
+  function handleCancel(event: SyntheticEvent<HTMLDialogElement>): void {
+    event.preventDefault();
+    onClose();
+  }
 
-  function handleOverlayMouseDown(event: MouseEvent<HTMLDivElement>): void {
-    if (event.target === event.currentTarget) {
+  function handleBackdropMouseDown(event: MouseEvent<HTMLDialogElement>): void {
+    if (event.target === dialogRef.current) {
       onClose();
     }
   }
 
   return (
-    <div className={styles.overlay} onMouseDown={handleOverlayMouseDown}>
-      <section
-        aria-labelledby="auth-dialog-title"
-        aria-modal="true"
-        className={styles.dialog}
-        role="dialog"
-      >
-        <header className={styles.dialogHeader}>
-          <button
-            aria-label="Fermer l'authentification"
-            className={styles.closeButton}
-            onClick={onClose}
-            type="button"
-          >
-            <span aria-hidden="true">×</span>
-          </button>
+    <dialog
+      aria-labelledby="auth-dialog-title"
+      className={styles.dialog}
+      onCancel={handleCancel}
+      onMouseDown={handleBackdropMouseDown}
+      ref={dialogRef}
+    >
+      <header className={styles.dialogHeader}>
+        <button
+          aria-label="Fermer l'authentification"
+          className={styles.closeButton}
+          onClick={onClose}
+          type="button"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
 
-          <h1 className={styles.dialogTitle} id="auth-dialog-title">
-            {session ? "Compte" : "Connexion ou inscription"}
-          </h1>
+        <h1 className={styles.dialogTitle} id="auth-dialog-title">
+          {session ? "Compte" : "Connexion ou inscription"}
+        </h1>
 
-          <span aria-hidden="true" className={styles.headerSpacer} />
-        </header>
+        <span aria-hidden="true" className={styles.headerSpacer} />
+      </header>
 
-        <div className={styles.dialogBody}>
-          {session ? (
-            <AuthSessionCard onLogout={handleLogout} session={session} />
-          ) : (
-            <>
-              <AuthFormPanel mode={mode} onSubmit={handleAuthSubmit} />
-              <p className={styles.switch}>
-                <span>{switchCopy.prefix}</span>
-                <button
-                  className={styles.switchButton}
-                  onClick={() => {
-                    onModeChange(switchCopy.mode);
-                  }}
-                  type="button"
-                >
-                  {switchCopy.label}
-                </button>
-              </p>
-            </>
-          )}
-        </div>
-      </section>
-    </div>
+      <div className={styles.dialogBody}>
+        {session ? (
+          <AuthSessionCard onLogout={clearSession} session={session} />
+        ) : (
+          <>
+            <AuthFormPanel mode={mode} onSubmit={handleAuthSubmit} />
+            <p className={styles.switch}>
+              <span>{switchCopy.prefix}</span>
+              <button
+                className={styles.switchButton}
+                onClick={() => {
+                  onModeChange(switchCopy.mode);
+                }}
+                type="button"
+              >
+                {switchCopy.label}
+              </button>
+            </p>
+          </>
+        )}
+      </div>
+    </dialog>
   );
 }

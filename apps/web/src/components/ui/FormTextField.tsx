@@ -1,4 +1,4 @@
-import { type ChangeEventHandler } from "react";
+import { type ChangeEventHandler, useId } from "react";
 
 import styles from "./FormTextField.module.css";
 
@@ -10,6 +10,7 @@ export type FormTextFieldProps = Readonly<{
   fieldPosition?: FormTextFieldPosition;
   id?: string;
   inputMode?: "email" | "text";
+  label: string;
   minLength?: number;
   name: string;
   onChange?: ChangeEventHandler<HTMLInputElement>;
@@ -25,6 +26,7 @@ export function FormTextField({
   fieldPosition = "single",
   id,
   inputMode = "text",
+  label,
   minLength,
   name,
   onChange,
@@ -33,21 +35,29 @@ export function FormTextField({
   type = "text",
   value
 }: FormTextFieldProps) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+
   return (
-    <input
-      autoComplete={autoComplete}
-      className={styles.input}
-      data-field-position={fieldPosition}
-      disabled={disabled}
-      id={id}
-      inputMode={inputMode}
-      minLength={minLength}
-      name={name}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      type={type}
-      value={value}
-    />
+    <>
+      <label className="visually-hidden" htmlFor={inputId}>
+        {label}
+      </label>
+      <input
+        autoComplete={autoComplete}
+        className={styles.input}
+        data-field-position={fieldPosition}
+        disabled={disabled}
+        id={inputId}
+        inputMode={inputMode}
+        minLength={minLength}
+        name={name}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        type={type}
+        value={value}
+      />
+    </>
   );
 }

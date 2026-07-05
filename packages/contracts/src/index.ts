@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+export const authPasswordMinLength = 8;
+export const authPasswordMaxLength = 128;
+
 export const authCredentialsSchema = z.object({
   email: z.email().max(254),
-  password: z.string().min(8).max(128)
+  password: z.string().min(authPasswordMinLength).max(authPasswordMaxLength)
 });
 
 export const authUserSchema = z.object({

@@ -1,5 +1,6 @@
 import { getApiClientErrorMessage } from "@corsica/api-client";
-import { type SyntheticEvent, useMemo, useState } from "react";
+import { authPasswordMinLength } from "@corsica/contracts";
+import { type SyntheticEvent, useId, useState } from "react";
 
 import { Button } from "../../../components/ui/Button";
 import { FormTextField } from "../../../components/ui/FormTextField";
@@ -39,7 +40,7 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState("");
-  const titleId = useMemo(() => `auth-form-title-${mode}`, [mode]);
+  const titleId = useId();
 
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -47,8 +48,10 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
   }
 
   async function submitCredentials(): Promise<void> {
-    if (password.length < 8) {
-      setErrorMessage("Le mot de passe doit contenir au moins 8 caractères.");
+    if (password.length < authPasswordMinLength) {
+      setErrorMessage(
+        `Le mot de passe doit contenir au moins ${String(authPasswordMinLength)} caractères.`
+      );
       return;
     }
 
@@ -82,6 +85,7 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
             disabled={isSubmitting}
             fieldPosition="first"
             inputMode="email"
+            label="Email"
             name="email"
             onChange={(event) => {
               setEmail(event.target.value);
@@ -95,7 +99,8 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
             autoComplete={copy.passwordAutocomplete}
             disabled={isSubmitting}
             fieldPosition="last"
-            minLength={8}
+            label="Mot de passe"
+            minLength={authPasswordMinLength}
             name="password"
             onChange={(event) => {
               setPassword(event.target.value);

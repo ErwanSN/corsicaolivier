@@ -13,9 +13,9 @@ export function AuthSessionCard({ onLogout, session }: AuthSessionCardProps) {
   return (
     <section aria-labelledby="auth-session-title" className={styles.card}>
       <BrandSignature variant="emblem" />
-      <h1 className={styles.title} id="auth-session-title">
+      <h2 className={styles.title} id="auth-session-title">
         Bienvenue
-      </h1>
+      </h2>
       <p className={styles.email}>{session.user.email}</p>
       <Button label="Se déconnecter" onClick={onLogout} variant="primary" />
     </section>

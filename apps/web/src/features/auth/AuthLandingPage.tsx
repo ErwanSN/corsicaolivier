@@ -26,6 +26,7 @@ export function AuthLandingPage() {
 
   return (
     <main className={styles.root}>
+      <h1 className="visually-hidden">Corsica Linea</h1>
       <AuthBackground />
 
       <div className={styles.content}>

@@ -1,5 +1,7 @@
+import { type Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import "@corsica/ui/tokens.css";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,7 +10,8 @@ const inter = Inter({
   variable: "--font-inter"
 });
 
-export const metadata = {
+export const metadata: Metadata = {
+  description: "Plateforme client Corsica Linea.",
   title: "Corsica Linea"
 };
 

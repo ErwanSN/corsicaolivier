@@ -19,9 +19,3 @@
   object-position: center center;
   width: 100%;
 }
-
-@media (min-width: 768px) {
-  .image {
-    object-position: center center;
-  }
-}
