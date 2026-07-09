@@ -1,10 +1,9 @@
 import { webBrandImages } from "../../../assets/brand-images";
-import styles from "./AuthBackground.module.css";
 
 export function AuthBackground() {
   return (
-    <div aria-hidden="true" className={styles.background}>
-      <picture className={styles.picture}>
+    <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden bg-surface-inverse">
+      <picture className="block h-full w-full">
         <source
           media="(min-width: 768px)"
           sizes="100vw"
@@ -27,7 +26,7 @@ export function AuthBackground() {
         />
         <img
           alt=""
-          className={styles.image}
+          className="h-full w-full object-cover object-center"
           decoding="async"
           fetchPriority="high"
           src={webBrandImages.authBackgroundMobile.source.src}

@@ -2,7 +2,8 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  typedRoutes: true
+  // Réactiver une fois toutes les routes de nav créées (nav vers pages en cours).
+  typedRoutes: false
 };
 
 export default nextConfig;

@@ -8,7 +8,7 @@ describe("CorsicaApiClient", () => {
       expect(input).toBe("http://localhost:3001/api/v1/auth/login");
       expect(init?.method).toBe("POST");
       expect(init?.body).toBe(
-        JSON.stringify({ email: "client@example.com", password: "password123" })
+        JSON.stringify({ identifier: "client@example.com", password: "password123" })
       );
 
       return Promise.resolve(
@@ -18,7 +18,9 @@ describe("CorsicaApiClient", () => {
           user: {
             createdAt: "2026-07-02T12:00:00.000Z",
             email: "client@example.com",
-            id: "00000000-0000-4000-8000-000000000000"
+            id: "00000000-0000-4000-8000-000000000000",
+            role: "USER",
+            username: "client"
           }
         })
       );
@@ -30,7 +32,7 @@ describe("CorsicaApiClient", () => {
 
     await expect(
       client.login({
-        email: "client@example.com",
+        identifier: "client@example.com",
         password: "password123"
       })
     ).resolves.toMatchObject({
@@ -64,7 +66,7 @@ describe("CorsicaApiClient", () => {
 
     await expect(
       client.login({
-        email: "client@example.com",
+        identifier: "client@example.com",
         password: "password123"
       })
     ).rejects.toMatchObject(expectedError);

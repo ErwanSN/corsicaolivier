@@ -1,6 +1,8 @@
 import { type Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import { AuthSessionProvider } from "../features/auth/AuthSessionProvider";
+import { RoleRedirect } from "../features/auth/RoleRedirect";
 import "@corsica/ui/tokens.css";
 import "./globals.css";
 
@@ -18,7 +20,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html className={inter.variable} lang="fr">
-      <body>{children}</body>
+      <body>
+        <AuthSessionProvider>
+          <RoleRedirect />
+          {children}
+        </AuthSessionProvider>
+      </body>
     </html>
   );
 }

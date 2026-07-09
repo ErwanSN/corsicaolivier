@@ -7,7 +7,6 @@ import { FormTextField } from "../../../components/ui/FormTextField";
 import { GoogleMark } from "../../../components/ui/GoogleMark";
 import { Separator } from "../../../components/ui/Separator";
 import { type AuthFormMode, type AuthSubmitHandler } from "../auth.types";
-import styles from "./AuthFormPanel.module.css";
 
 export type AuthFormPanelProps = Readonly<{
   mode: AuthFormMode;
@@ -16,11 +15,25 @@ export type AuthFormPanelProps = Readonly<{
 
 const copyByMode = {
   createAccount: {
+    enforcePasswordPolicy: true,
+    identifierAutocomplete: "email",
+    identifierInputMode: "email",
+    identifierLabel: "Email",
+    identifierName: "email",
+    identifierPlaceholder: "Email",
+    identifierType: "email",
     loadingLabel: "Création...",
     passwordAutocomplete: "new-password",
     submitLabel: "Créer un compte"
   },
   signIn: {
+    enforcePasswordPolicy: false,
+    identifierAutocomplete: "username",
+    identifierInputMode: "text",
+    identifierLabel: "Email ou nom d'utilisateur",
+    identifierName: "identifier",
+    identifierPlaceholder: "Email ou nom d'utilisateur",
+    identifierType: "text",
     loadingLabel: "Connexion...",
     passwordAutocomplete: "current-password",
     submitLabel: "Se connecter"
@@ -28,6 +41,13 @@ const copyByMode = {
 } as const satisfies Record<
   AuthFormMode,
   Readonly<{
+    enforcePasswordPolicy: boolean;
+    identifierAutocomplete: string;
+    identifierInputMode: "email" | "text";
+    identifierLabel: string;
+    identifierName: string;
+    identifierPlaceholder: string;
+    identifierType: "email" | "text";
     loadingLabel: string;
     passwordAutocomplete: string;
     submitLabel: string;
@@ -36,7 +56,7 @@ const copyByMode = {
 
 export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
   const copy = copyByMode[mode];
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState("");
@@ -48,7 +68,7 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
   }
 
   async function submitCredentials(): Promise<void> {
-    if (password.length < authPasswordMinLength) {
+    if (copy.enforcePasswordPolicy && password.length < authPasswordMinLength) {
       setErrorMessage(
         `Le mot de passe doit contenir au moins ${String(authPasswordMinLength)} caractères.`
       );
@@ -60,7 +80,7 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
 
     try {
       await onSubmit({
-        email,
+        identifier,
         password
       });
     } catch (error) {
@@ -71,36 +91,34 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
   }
 
   return (
-    <section aria-labelledby={titleId} className={styles.panel}>
-      <div className={styles.header}>
-        <h2 className={styles.title} id={titleId}>
-          Bienvenue sur Corsica Linea
-        </h2>
-      </div>
+    <section aria-labelledby={titleId} className="grid min-w-0 gap-6 bg-surface">
+      <h2 className="text-[22px] font-semibold leading-7 text-foreground" id={titleId}>
+        Bienvenue sur Corsica Linea
+      </h2>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.fieldGroup}>
+      <form className="grid min-w-0 gap-4" onSubmit={handleSubmit}>
+        <div className="grid min-w-0">
           <FormTextField
-            autoComplete="email"
+            autoComplete={copy.identifierAutocomplete}
             disabled={isSubmitting}
             fieldPosition="first"
-            inputMode="email"
-            label="Email"
-            name="email"
+            inputMode={copy.identifierInputMode}
+            label={copy.identifierLabel}
+            name={copy.identifierName}
             onChange={(event) => {
-              setEmail(event.target.value);
+              setIdentifier(event.target.value);
             }}
-            placeholder="Email"
+            placeholder={copy.identifierPlaceholder}
             required
-            type="email"
-            value={email}
+            type={copy.identifierType}
+            value={identifier}
           />
           <FormTextField
             autoComplete={copy.passwordAutocomplete}
             disabled={isSubmitting}
             fieldPosition="last"
             label="Mot de passe"
-            minLength={authPasswordMinLength}
+            {...(copy.enforcePasswordPolicy ? { minLength: authPasswordMinLength } : {})}
             name="password"
             onChange={(event) => {
               setPassword(event.target.value);
@@ -113,7 +131,7 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
         </div>
 
         {errorMessage ? (
-          <p className={styles.error} role="alert">
+          <p className="-mt-0.5 text-[13px] font-medium leading-[18px] text-brand" role="alert">
             {errorMessage}
           </p>
         ) : null}

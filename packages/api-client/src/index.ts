@@ -5,7 +5,9 @@ import {
   type ApiErrorDto,
   type AuthCredentialsDto,
   type AuthSessionDto,
-  type AuthUserDto
+  type AuthUserDto,
+  type LoginCredentialsDto,
+  type UpdateProfileDto
 } from "@corsica/contracts";
 
 type Fetcher = typeof fetch;
@@ -44,7 +46,7 @@ export class CorsicaApiClient {
     });
   }
 
-  login(credentials: AuthCredentialsDto): Promise<AuthSessionDto> {
+  login(credentials: LoginCredentialsDto): Promise<AuthSessionDto> {
     return this.request("/api/v1/auth/login", {
       body: credentials,
       method: "POST",
@@ -60,12 +62,21 @@ export class CorsicaApiClient {
     });
   }
 
+  updateProfile(accessToken: string, profile: UpdateProfileDto): Promise<AuthUserDto> {
+    return this.request("/api/v1/auth/me", {
+      accessToken,
+      body: profile,
+      method: "PATCH",
+      schema: authUserSchema
+    });
+  }
+
   private async request<Response>(
     path: string,
     options: Readonly<{
       accessToken?: string;
       body?: unknown;
-      method: "GET" | "POST";
+      method: "GET" | "PATCH" | "POST";
       schema: { parse: (value: unknown) => Response };
     }>
   ): Promise<Response> {
@@ -84,7 +95,10 @@ export class CorsicaApiClient {
       requestInit.body = JSON.stringify(options.body);
     }
 
-    const response = await this.fetcher(`${this.baseUrl}${path}`, requestInit);
+    // Appel en fonction autonome (this indéfini) : `fetch` natif lève
+    // "Illegal invocation" s'il est appelé comme méthode (this = ce client).
+    const { fetcher } = this;
+    const response = await fetcher(`${this.baseUrl}${path}`, requestInit);
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {

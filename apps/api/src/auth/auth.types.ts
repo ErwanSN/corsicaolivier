@@ -1,7 +1,8 @@
-import { type AuthUserDto } from "@corsica/contracts";
+import { type AuthUserDto, type Role } from "@corsica/contracts";
 
 export type AuthTokenPayload = Readonly<{
   email: string;
+  role: Role;
   sub: string;
 }>;
 

@@ -1,5 +1,4 @@
 import { webBrandImages } from "../../assets/brand-images";
-import styles from "./BrandSignature.module.css";
 
 type BrandSignatureVariant = "emblem" | "header";
 
@@ -13,7 +12,7 @@ export function BrandSignature({ variant }: BrandSignatureProps) {
       <img
         alt=""
         aria-hidden="true"
-        className={styles.emblem}
+        className="h-[30px] w-[30px] object-contain [filter:brightness(0)]"
         decoding="async"
         src={webBrandImages.logoSymbolDark.source.src}
       />
@@ -21,15 +20,15 @@ export function BrandSignature({ variant }: BrandSignatureProps) {
   }
 
   return (
-    <div aria-label="Corsica Linea" className={styles.header} role="img">
+    <div aria-label="Corsica Linea" className="inline-flex items-center gap-2" role="img">
       <img
         alt=""
         aria-hidden="true"
-        className={styles.headerMark}
+        className="h-[22px] w-[22px]"
         decoding="async"
         src={webBrandImages.logoSymbolWhite.source.src}
       />
-      <span className={styles.headerText}>CORSICA linea</span>
+      <span className="text-[12px] font-bold leading-[15px] text-background">CORSICA linea</span>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { Button } from "../../../components/ui/Button";
-import styles from "./AuthWelcomeActions.module.css";
 
 export type AuthWelcomeActionsProps = Readonly<{
   onCreateAccount: () => void;
@@ -8,7 +7,7 @@ export type AuthWelcomeActionsProps = Readonly<{
 
 export function AuthWelcomeActions({ onCreateAccount, onLogin }: AuthWelcomeActionsProps) {
   return (
-    <div className={styles.actions}>
+    <div className="grid w-full gap-3">
       <Button label="Créer un compte" onClick={onCreateAccount} size="large" variant="secondary" />
       <Button label="Se connecter" onClick={onLogin} size="large" variant="primary" />
     </div>

@@ -1,7 +1,5 @@
 import { type ChangeEventHandler, useId } from "react";
 
-import styles from "./FormTextField.module.css";
-
 type FormTextFieldPosition = "first" | "last" | "single";
 
 export type FormTextFieldProps = Readonly<{
@@ -19,6 +17,15 @@ export type FormTextFieldProps = Readonly<{
   type?: "email" | "password" | "text";
   value?: string;
 }>;
+
+const inputClassName = [
+  "h-14 min-w-0 rounded-xl border border-border bg-surface px-3.5",
+  "text-[16px] leading-[22px] text-foreground placeholder:text-muted",
+  "focus:border-foreground focus:outline-none",
+  "disabled:cursor-not-allowed disabled:opacity-[0.62]",
+  "data-[field-position=first]:rounded-b-none",
+  "data-[field-position=last]:-mt-px data-[field-position=last]:rounded-t-none"
+].join(" ");
 
 export function FormTextField({
   autoComplete,
@@ -40,12 +47,12 @@ export function FormTextField({
 
   return (
     <>
-      <label className="visually-hidden" htmlFor={inputId}>
+      <label className="sr-only" htmlFor={inputId}>
         {label}
       </label>
       <input
         autoComplete={autoComplete}
-        className={styles.input}
+        className={inputClassName}
         data-field-position={fieldPosition}
         disabled={disabled}
         id={inputId}
