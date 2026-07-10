@@ -70,19 +70,23 @@ export function AccountDetails({
           <ControlHistoryPreview />
         ) : (
           <AccountRow
-            subtitle="Vos billets, cartes, justificatifs de voyage…"
-            title="Vos titres de transport"
+            subtitle="Aucun titre synchronisé avec ce compte local"
+            title="Titres de transport"
           />
         )}
       </Section>
 
       <Section title="Accessibilité">
         <AccountRow
-          href="tel:0000"
-          subtitle="Un risque pour votre sécurité ou celle des autres ?"
-          title="Numéro d’alerte 0000"
+          href="tel:+33825888088"
+          subtitle="0,15 € TTC/min · horaires sur le site officiel"
+          title="Service client · 0825 88 80 88"
         />
-        <AccountRow subtitle="Posez-nous une question" title="Besoin d’aide ?" />
+        <AccountRow
+          href="https://www.corsicalinea.com/la-compagnie/nous-contacter/contactez-nous"
+          subtitle="Formulaire sur le site officiel"
+          title="Nous envoyer un message"
+        />
       </Section>
 
       <div className="mt-8">

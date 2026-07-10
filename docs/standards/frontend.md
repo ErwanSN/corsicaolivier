@@ -25,3 +25,5 @@
   requests, DOM size and DOMContentLoaded.
 - Camera workflows require an explicit user gesture, stop media tracks on teardown and provide an
   accessible manual fallback when barcode detection is unavailable.
+- Never render a button, link affordance or enabled form submission without a real behavior. Static
+  information uses non-interactive semantics; unavailable product capabilities are omitted.

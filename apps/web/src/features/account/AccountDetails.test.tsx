@@ -28,6 +28,11 @@ describe("AccountDetails role experience", () => {
     expect(screen.getByRole("heading", { name: "Compte client" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Modifier mon mot de passe/ })).toBeInTheDocument();
     expect(screen.queryByText("Administration")).not.toBeInTheDocument();
+    expect(screen.getByText("Titres de transport").closest("button, a")).toBeNull();
+    expect(screen.getByRole("link", { name: /Service client/ })).toHaveAttribute(
+      "href",
+      "tel:+33825888088"
+    );
   });
 
   it("requires an employee password request", () => {

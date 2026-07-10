@@ -22,14 +22,42 @@ export function AccountRow({
   tone = "default",
   trailing
 }: AccountRowProps) {
-  const className = cn(
-    "focus-ring flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition",
-    tone === "danger"
-      ? "border-brand/20 bg-brand/5 hover:bg-brand/10"
-      : "border-border bg-surface hover:border-foreground/25"
+  const interactive = Boolean(href ?? onClick);
+  const className = accountRowClassName(interactive, tone);
+  const content = (
+    <AccountRowContent
+      interactive={interactive}
+      subtitle={subtitle}
+      title={title}
+      tone={tone}
+      trailing={trailing}
+    />
   );
 
-  const content = (
+  if (href) return <AccountRowLink className={className} content={content} href={href} />;
+  if (onClick)
+    return (
+      <button className={className} onClick={onClick} type="button">
+        {content}
+      </button>
+    );
+  return <div className={className}>{content}</div>;
+}
+
+function AccountRowContent({
+  interactive,
+  subtitle,
+  title,
+  tone,
+  trailing
+}: Readonly<{
+  interactive: boolean;
+  subtitle: string | undefined;
+  title: string;
+  tone: "danger" | "default";
+  trailing: ReactNode;
+}>) {
+  return (
     <>
       <span className="min-w-0 flex-1">
         <span
@@ -44,32 +72,40 @@ export function AccountRow({
           <span className="mt-0.5 block truncate text-[12px] text-muted">{subtitle}</span>
         ) : null}
       </span>
-      <span className={tone === "danger" ? "text-brand" : "text-muted"}>
-        {trailing ?? <ChevronRight className="size-5" />}
-      </span>
+      {interactive ? (
+        <span className={tone === "danger" ? "text-brand" : "text-muted"}>
+          {trailing ?? <ChevronRight className="size-5" />}
+        </span>
+      ) : null}
     </>
   );
+}
 
-  if (href) {
-    if (isInternalRoute(href)) {
-      return (
-        <Link className={className} href={href}>
-          {content}
-        </Link>
-      );
-    }
-
+function AccountRowLink({
+  className,
+  content,
+  href
+}: Readonly<{ className: string; content: ReactNode; href: string }>) {
+  if (isInternalRoute(href))
     return (
-      <a className={className} href={href}>
+      <Link className={className} href={href}>
         {content}
-      </a>
+      </Link>
     );
-  }
-
   return (
-    <button className={className} onClick={onClick} type="button">
+    <a className={className} href={href}>
       {content}
-    </button>
+    </a>
+  );
+}
+
+function accountRowClassName(interactive: boolean, tone: "danger" | "default"): string {
+  return cn(
+    "flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left",
+    interactive ? "focus-ring transition" : "cursor-default",
+    tone === "danger"
+      ? "border-brand/20 bg-brand/5 hover:bg-brand/10"
+      : cn("border-border bg-surface", interactive && "hover:border-foreground/25")
   );
 }
 
