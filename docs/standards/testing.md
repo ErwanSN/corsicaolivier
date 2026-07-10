@@ -18,3 +18,5 @@
 - Browser failures retain traces, screenshots and videos as CI artifacts for diagnosis.
 - Public critical paths run on Chromium and Firefox; mobile viewport behavior runs on Chromium.
 - API performance smoke tests enforce a p95 latency budget under bounded concurrency.
+- `pnpm load:test` runs a sustained health/database probe with configurable concurrency, request
+  timeout, error-rate and latency budgets. Retain its JSON report as release evidence.

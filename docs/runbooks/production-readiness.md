@@ -27,3 +27,7 @@ aggregated diagnostic when configuration is unsafe.
 Run `pnpm ci`, `pnpm db:recovery-test` and a restore drill against the deployment artifact. Confirm
 that `/api/health` reports a reachable database and that `/api/metrics` rejects requests without
 the monitoring bearer token.
+
+Run `pnpm load:test` for the default 60-second window against the deployed health endpoint. Tune
+`LOAD_TARGET_URL`, `LOAD_CONCURRENCY`, `LOAD_P95_BUDGET_MS` and `LOAD_MAX_ERROR_RATE` only from
+measured service-level objectives, and retain the emitted JSON report with the release evidence.
