@@ -16,10 +16,12 @@ import { shouldRejectCookieWrite } from "./csrf-protection";
 import { ApiExceptionFilter } from "./errors/api-exception.filter";
 import { recordHttpRequest } from "./metrics/metrics.registry";
 import { resolveRequestId } from "./request-id";
+import { validateRuntimeConfiguration } from "./runtime-config";
 import { shutdownTelemetry } from "./telemetry/instrumentation";
 import { getActiveTraceContext } from "./telemetry/trace-context";
 
 async function bootstrap(): Promise<void> {
+  validateRuntimeConfiguration(process.env);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({

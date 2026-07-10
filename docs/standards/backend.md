@@ -12,6 +12,8 @@
 ## Runtime
 
 - Services are stateless.
+- Production configuration is validated before framework startup; insecure secrets, origins or
+  unsupported instance/database combinations are fatal errors.
 - Shutdown must be graceful.
 - External calls require timeouts, retries and circuit-breaking where appropriate.
 - Logs must include request identifiers.

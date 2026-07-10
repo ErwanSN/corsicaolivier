@@ -32,8 +32,9 @@ Web Next.js       Mobile Expo
   contracts and never embed business records in the frontend bundle.
 - Ticket controls are append-only operational records linked to the dossier and authenticated
   operator. Staff history is scoped to the current operator.
-- The API is stateless except for its database and can be moved to a server database when the
-  deployment topology requires horizontal writes.
+- The supported deployment is one API process and one SQLite writer. Startup rejects multiple
+  instances with a file database; horizontal scaling requires a server database and distributed
+  rate limiter ADR.
 - Workers currently provide lifecycle-safe processing scaffolding; no queue backend is implied.
 
 ## Scaling policy
