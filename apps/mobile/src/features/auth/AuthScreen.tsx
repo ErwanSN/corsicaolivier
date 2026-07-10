@@ -1,6 +1,6 @@
 import { type AuthSessionDto } from "@corsica/contracts";
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { ImageBackground, StatusBar, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ImageBackground, StatusBar, StyleSheet, View } from "react-native";
 
 import { brandImages } from "../../assets/brand-images";
 import { BrandSignature } from "../../components/brand/BrandSignature";
@@ -18,7 +18,7 @@ export function AuthScreen() {
   const [authMode, setAuthMode] = useState<AuthMode>("welcome");
   const [session, setSession] = useState<AuthSessionDto | null>(null);
   const formMode = authMode === "welcome" ? null : authMode;
-  useHydrateMobileSession(setSession);
+  const hydrated = useHydrateMobileSession(setSession);
 
   const handleCreateAccount = useCallback(() => {
     setAuthMode("createAccount");
@@ -64,6 +64,13 @@ export function AuthScreen() {
     setAuthMode("welcome");
   }, [session]);
 
+  if (!hydrated)
+    return (
+      <View accessibilityLabel="Restauration de la session" style={styles.loader}>
+        <ActivityIndicator color={theme.colors.brand} size="large" />
+      </View>
+    );
+
   if (formMode) {
     return (
       <AuthFormScreen
@@ -102,29 +109,18 @@ export function AuthScreen() {
 
 function useHydrateMobileSession(
   setSession: Dispatch<SetStateAction<AuthSessionDto | null>>
-): void {
+): boolean {
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     let isActive = true;
     async function hydrate(): Promise<void> {
-      const stored = await readStoredTokens();
-      if (!stored.accessToken || !stored.refreshToken) {
-        await clearStoredAuthSession();
-        return;
-      }
-      const { accessToken, refreshToken } = stored;
       try {
-        const user = await apiClient.me(accessToken);
-        if (isActive) {
-          setSession({ accessToken, refreshToken, tokenType: "Bearer", user });
-        }
+        const restoredSession = await restoreMobileSession();
+        if (isActive) setSession(restoredSession);
       } catch {
-        try {
-          const refreshed = await apiClient.refresh(refreshToken);
-          await storeAuthSession(refreshed);
-          if (isActive) setSession(refreshed);
-        } catch {
-          await clearStoredAuthSession();
-        }
+        await clearStoredAuthSession().catch(() => undefined);
+      } finally {
+        if (isActive) setHydrated(true);
       }
     }
     void hydrate();
@@ -132,6 +128,32 @@ function useHydrateMobileSession(
       isActive = false;
     };
   }, [setSession]);
+  return hydrated;
+}
+
+async function restoreMobileSession(): Promise<AuthSessionDto | null> {
+  const { accessToken, refreshToken } = await readStoredTokens();
+  if (!accessToken || !refreshToken) {
+    await clearStoredAuthSession();
+    return null;
+  }
+  try {
+    const user = await apiClient.me(accessToken);
+    return { accessToken, refreshToken, tokenType: "Bearer", user };
+  } catch {
+    return refreshMobileSession(refreshToken);
+  }
+}
+
+async function refreshMobileSession(refreshToken: string): Promise<AuthSessionDto | null> {
+  try {
+    const refreshed = await apiClient.refresh(refreshToken);
+    await storeAuthSession(refreshed);
+    return refreshed;
+  } catch {
+    await clearStoredAuthSession();
+    return null;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -149,5 +171,11 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: theme.colors.foreground,
     flex: 1
+  },
+  loader: {
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    flex: 1,
+    justifyContent: "center"
   }
 });

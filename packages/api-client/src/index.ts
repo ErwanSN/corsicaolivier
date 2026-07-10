@@ -27,11 +27,26 @@ import { createTraceparent, isWebRefreshEligible } from "./request-policy";
 
 const unknownRequestId = "00000000-0000-4000-8000-000000000000";
 
+function shouldRefreshWebSession(
+  response: Response,
+  path: string,
+  requestInit: RequestInit,
+  canRefreshWebSession: boolean
+): boolean {
+  return (
+    response.status === 401 &&
+    canRefreshWebSession &&
+    !new Headers(requestInit.headers).has("Authorization") &&
+    isWebRefreshEligible(path)
+  );
+}
+
 type Fetcher = typeof fetch;
 
 export type CorsicaApiClientOptions = Readonly<{
   baseUrl: string;
   fetcher?: Fetcher;
+  requestTimeoutMilliseconds?: number;
 }>;
 
 export class ApiClientError extends Error {
@@ -51,11 +66,20 @@ export class ApiClientError extends Error {
 export class CorsicaApiClient {
   private readonly baseUrl: string;
   private readonly fetcher: Fetcher;
+  private readonly requestTimeoutMilliseconds: number;
   private webRefreshPromise: Promise<boolean> | null = null;
 
-  constructor({ baseUrl, fetcher = fetch }: CorsicaApiClientOptions) {
+  constructor({
+    baseUrl,
+    fetcher = fetch,
+    requestTimeoutMilliseconds = 10_000
+  }: CorsicaApiClientOptions) {
+    if (!Number.isFinite(requestTimeoutMilliseconds) || requestTimeoutMilliseconds <= 0) {
+      throw new TypeError("requestTimeoutMilliseconds must be positive.");
+    }
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.fetcher = fetcher;
+    this.requestTimeoutMilliseconds = requestTimeoutMilliseconds;
   }
 
   register(credentials: AuthCredentialsDto): Promise<AuthSessionDto> {
@@ -255,14 +279,13 @@ export class CorsicaApiClient {
     const { fetcher } = this;
     const headers = new Headers(requestInit.headers);
     if (!headers.has("traceparent")) headers.set("traceparent", createTraceparent());
-    requestInit = { ...requestInit, headers };
+    requestInit = {
+      ...requestInit,
+      headers,
+      signal: requestInit.signal ?? AbortSignal.timeout(this.requestTimeoutMilliseconds)
+    };
     let response = await fetcher(`${this.baseUrl}${path}`, requestInit);
-    if (
-      response.status === 401 &&
-      canRefreshWebSession &&
-      !new Headers(requestInit.headers).has("Authorization") &&
-      isWebRefreshEligible(path)
-    ) {
+    if (shouldRefreshWebSession(response, path, requestInit, canRefreshWebSession)) {
       if (await this.refreshWebSession()) {
         response = await fetcher(`${this.baseUrl}${path}`, requestInit);
       }
@@ -290,7 +313,8 @@ export class CorsicaApiClient {
     const refreshPromise = this.fetcher(`${this.baseUrl}/api/v1/auth/web/refresh`, {
       credentials: "include",
       headers: { traceparent: createTraceparent() },
-      method: "POST"
+      method: "POST",
+      signal: AbortSignal.timeout(this.requestTimeoutMilliseconds)
     })
       .then((response) => response.ok)
       .catch(() => false);

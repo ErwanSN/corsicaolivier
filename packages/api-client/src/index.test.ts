@@ -8,6 +8,7 @@ describe("CorsicaApiClient", () => {
     const fetcher = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       expect(input).toBe("http://localhost:3001/api/v1/auth/login");
       expect(init?.method).toBe("POST");
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
       expect(new Headers(init?.headers).get("traceparent")).toMatch(
         /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/
       );
@@ -45,6 +46,13 @@ describe("CorsicaApiClient", () => {
       refreshToken: "refresh-token",
       tokenType: "Bearer"
     });
+  });
+
+  it("rejects invalid request timeout configuration", () => {
+    expect(
+      () =>
+        new CorsicaApiClient({ baseUrl: "http://localhost:3001", requestTimeoutMilliseconds: 0 })
+    ).toThrow(/requestTimeoutMilliseconds/);
   });
 
   it("throws typed API errors", async () => {
