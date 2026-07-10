@@ -5,10 +5,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "build/**"]
     },
-    "@corsica/mobile#build": {
-      "cache": false,
-      "outputs": []
-    },
     "clean": {
       "cache": false
     },

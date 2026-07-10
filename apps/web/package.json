@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "clean": "rimraf .next dist coverage",
+    "clean": "rimraf .next .next-dev dist coverage",
     "dev": "next dev --port 3000",
     "lint": "eslint . --max-warnings=0",
     "start": "next start --port 3000",

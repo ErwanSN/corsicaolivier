@@ -8,17 +8,33 @@
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": ["**/*"],
     "ios": {
+      "buildNumber": "1",
+      "bundleIdentifier": "com.skynetinitiative.corsica",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       },
-      "softwareKeyboardLayoutMode": "pan"
+      "package": "com.skynetinitiative.corsica",
+      "softwareKeyboardLayoutMode": "pan",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro"
     },
-    "plugins": ["expo-font", "expo-secure-store"]
+    "plugins": [
+      "expo-font",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Autoriser Corsica Linea à utiliser Face ID pour sécuriser votre session."
+        }
+      ]
+    ]
   }
 }

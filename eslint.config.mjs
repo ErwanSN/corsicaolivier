@@ -19,6 +19,7 @@ export default tseslint.config(
     ignores: [
       "**/.expo/**",
       "**/.next/**",
+      "**/.next-dev/**",
       "**/.turbo/**",
       "**/build/**",
       "**/coverage/**",

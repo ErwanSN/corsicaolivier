@@ -20,3 +20,5 @@
 - API performance smoke tests enforce a p95 latency budget under bounded concurrency.
 - `pnpm load:test` runs a sustained health/database probe with configurable concurrency, request
   timeout, error-rate and latency budgets. Retain its JSON report as release evidence.
+- The mobile build exports web, Android and iOS bundles and enforces total, per-bundle and font-asset
+  budgets; an informational EAS message is not a valid build gate.

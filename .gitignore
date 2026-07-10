@@ -5,6 +5,7 @@
 .expo
 .expo-shared
 .next
+.next-dev
 .turbo
 .vercel
 build

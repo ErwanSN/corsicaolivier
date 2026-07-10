@@ -39,6 +39,7 @@ const securityHeaders = [
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  distDir: development ? ".next-dev" : ".next",
   async headers() {
     return [
       {
