@@ -37,6 +37,8 @@
 - Password changes atomically increment a persisted session version: every previously issued JWT is
   rejected, while the initiating browser receives a rotated HttpOnly cookie.
 - Administrative password and role changes apply the same revocation invariant and password policy.
+- Dossier reads and ticket-control writes require `EMPLOYEE` or `ADMIN`; the verified session is
+  always the source of the operator identity.
 - Validate all inputs.
 - Sanitize logs.
 - Use timeouts for all network calls.

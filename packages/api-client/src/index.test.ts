@@ -117,6 +117,29 @@ describe("CorsicaApiClient", () => {
     );
   });
 
+  it("creates and validates a persisted staff control", async () => {
+    const dossierId = "93620490-0000-4000-8000-000000000001";
+    const response = {
+      controlledAt: "2026-07-10T08:00:00.000Z",
+      controlledBy: "agent",
+      dossierId,
+      id: "00000000-0000-4000-8000-000000000301",
+      reference: "9362049",
+      route: "MRS - ILR",
+      status: "valide" as const
+    };
+    const fetcher = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      expect(input).toBe("http://localhost:3001/api/v1/controls");
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBe(JSON.stringify({ dossierId, status: "valide" }));
+      return Promise.resolve(Response.json(response));
+    };
+    const client = new CorsicaApiClient({ baseUrl: "http://localhost:3001", fetcher });
+    await expect(client.createControl(undefined, { dossierId, status: "valide" })).resolves.toEqual(
+      response
+    );
+  });
+
   it("renouvelle une session web expirée une seule fois avant de rejouer la requête", async () => {
     const calls: string[] = [];
     const user = {

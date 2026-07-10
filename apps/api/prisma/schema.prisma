@@ -23,6 +23,7 @@ model User {
   updatedAt              DateTime                @updatedAt @map("updated_at")
   passwordChangeRequests PasswordChangeRequest[]
   refreshSessions        RefreshSession[]
+  controlRecords         ControlRecord[]
 
   @@map("users")
 }
@@ -72,9 +73,24 @@ model Dossier {
   updatedAt     DateTime   @updatedAt @map("updated_at")
   travelers     Traveler[]
   vehicles      Vehicle[]
+  controlRecords ControlRecord[]
 
   @@index([normalizedPhone])
   @@map("dossiers")
+}
+
+model ControlRecord {
+  id             String   @id @default(uuid())
+  dossierId      String   @map("dossier_id")
+  controlledById String   @map("controlled_by_id")
+  status         String
+  controlledAt   DateTime @default(now()) @map("controlled_at")
+  dossier        Dossier  @relation(fields: [dossierId], references: [id], onDelete: Restrict)
+  controlledBy   User     @relation(fields: [controlledById], references: [id], onDelete: Restrict)
+
+  @@index([controlledAt])
+  @@index([controlledById, controlledAt])
+  @@map("control_records")
 }
 
 model Traveler {

@@ -1,10 +1,11 @@
 "use client";
 
-import { Car, Check, Clock, Printer, User, X } from "lucide-react";
+import { Car, Check, Clock, User, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type Dossier, type TravelerStatus } from "@corsica/contracts";
 
 import { cn } from "../../lib/cn";
+import { ControlActions } from "./ControlActions";
 
 function StatusCircle({ status }: Readonly<{ status: TravelerStatus }>) {
   const boarded = status === "embarque";
@@ -104,18 +105,7 @@ export function DossierDetail({ dossier }: Readonly<{ dossier: Dossier }>) {
         </div>
       </div>
 
-      <div className="mt-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden">
-        <button
-          className="focus-ring flex w-full items-center justify-center gap-2 rounded-full bg-surface-inverse py-4 text-[15px] font-semibold text-background transition hover:opacity-90"
-          onClick={() => {
-            window.print();
-          }}
-          type="button"
-        >
-          <Printer aria-hidden="true" className="size-4" />
-          Imprimer le dossier
-        </button>
-      </div>
+      <ControlActions dossierId={dossier.id} />
     </div>
   );
 }

@@ -23,3 +23,5 @@
 - Accessibility is part of the feature, not a follow-up.
 - Production browser tests enforce delivery budgets for JavaScript, total transferred bytes,
   requests, DOM size and DOMContentLoaded.
+- Camera workflows require an explicit user gesture, stop media tracks on teardown and provide an
+  accessible manual fallback when barcode detection is unavailable.

@@ -30,6 +30,8 @@ Web Next.js       Mobile Expo
   métier and port configuration.
 - Dossiers, travelers and vehicles are owned by the API; staff screens consume validated shared
   contracts and never embed business records in the frontend bundle.
+- Ticket controls are append-only operational records linked to the dossier and authenticated
+  operator. Staff history is scoped to the current operator.
 - The API is stateless except for its database and can be moved to a server database when the
   deployment topology requires horizontal writes.
 - Workers currently provide lifecycle-safe processing scaffolding; no queue backend is implied.

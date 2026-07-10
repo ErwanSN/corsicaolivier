@@ -6,14 +6,11 @@ import { LogOut, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode } from "react";
 
-import { recentControls } from "../staff/control-history";
-import { ControlHistoryItem } from "../staff/ControlHistoryItem";
+import { ControlHistoryPreview } from "../staff/ControlHistoryPreview";
 import { useStoredAuthSession } from "../auth/use-stored-auth-session";
 import { type WebAuthSession } from "../auth/web-auth-session";
 import { AccountRow } from "./AccountRow";
 import { AccountSecurity } from "./AccountSecurity";
-
-const recentControlsPreviewCount = 3;
 
 function Section({ children, title }: Readonly<{ children: ReactNode; title: string }>) {
   return (
@@ -70,18 +67,7 @@ export function AccountDetails({
 
       <Section title="Historique">
         {variant === "staff" ? (
-          <>
-            {recentControls.slice(0, recentControlsPreviewCount).map((control) => (
-              <ControlHistoryItem control={control} key={control.id} />
-            ))}
-            {recentControls.length > recentControlsPreviewCount ? (
-              <AccountRow
-                href="/salarie/historique"
-                subtitle={`${String(recentControls.length)} contrôles enregistrés`}
-                title="Voir tout l’historique"
-              />
-            ) : null}
-          </>
+          <ControlHistoryPreview />
         ) : (
           <AccountRow
             subtitle="Vos billets, cartes, justificatifs de voyage…"

@@ -36,7 +36,9 @@ test("les dossiers refusent les visiteurs et les comptes clients", async ({ requ
   ).toBe(403);
 });
 
-test("un employé recherche et ouvre un dossier persisté", async ({ page }) => {
+test("un employé recherche, contrôle et retrouve un dossier dans son historique", async ({
+  page
+}) => {
   await login(page, employeeEmail);
   await page.getByLabel("Saisissez le n° de téléphone").fill("0675561134");
   const result = page.getByRole("link", { name: /Dossier n° 9362049/ });
@@ -45,6 +47,16 @@ test("un employé recherche et ouvre un dossier persisté", async ({ page }) => 
   await expect(page).toHaveURL(/\/salarie\/dossier\/93620490-0000-4000-8000-000000000001$/);
   await expect(page.getByRole("heading", { name: "Dossier n° 9362049" })).toBeVisible();
   await expect(page.getByText("Jeanne Delavoi")).toBeVisible();
+  await page.getByRole("button", { name: "Valider", exact: true }).click();
+  await expect(page.getByText("Contrôle validé et enregistré.")).toBeVisible();
+
+  await page.goto("/salarie/historique");
+  await expect(page.getByText("9362049", { exact: true }).first()).toBeVisible();
+
+  await page.goto("/salarie/scan");
+  await page.getByLabel("Référence du billet").fill("9362049");
+  await page.getByRole("button", { name: "Rechercher le dossier" }).click();
+  await expect(page).toHaveURL(/\/salarie\/dossier\/93620490-0000-4000-8000-000000000001$/);
 });
 
 async function ensureAccount(request: APIRequestContext, email: string): Promise<void> {

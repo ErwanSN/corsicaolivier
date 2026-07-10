@@ -94,6 +94,21 @@ export const dossierSearchQuerySchema = z.object({
   field: dossierSearchFieldSchema,
   query: z.string().trim().min(2).max(100)
 });
+export const controlStatusSchema = z.enum(["refuse", "valide"]);
+export const controlRecordSchema = z.object({
+  controlledAt: z.string(),
+  controlledBy: z.string().min(1).max(254),
+  dossierId: z.uuid(),
+  id: z.uuid(),
+  reference: z.string().min(1).max(30),
+  route: z.string().min(1).max(150),
+  status: controlStatusSchema
+});
+export const controlRecordListSchema = z.array(controlRecordSchema).max(100);
+export const createControlRecordSchema = z.object({
+  dossierId: z.uuid(),
+  status: controlStatusSchema
+});
 
 export const portPointTypeSchema = z.enum(["boarding", "control", "ship", "storage"]);
 export const coordinatesSchema = z.tuple([
@@ -150,6 +165,9 @@ export type ApiErrorDto = z.infer<typeof apiErrorSchema>;
 export type Dossier = z.infer<typeof dossierSchema>;
 export type DossierSearchField = z.infer<typeof dossierSearchFieldSchema>;
 export type DossierSearchQuery = z.infer<typeof dossierSearchQuerySchema>;
+export type ControlRecord = z.infer<typeof controlRecordSchema>;
+export type ControlStatus = z.infer<typeof controlStatusSchema>;
+export type CreateControlRecord = z.infer<typeof createControlRecordSchema>;
 export type TravelerStatus = z.infer<typeof travelerStatusSchema>;
 export type AuthCredentialsDto = z.infer<typeof authCredentialsSchema>;
 export type AuthSessionDto = z.infer<typeof authSessionSchema>;

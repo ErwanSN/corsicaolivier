@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { portMapConfigSchema } from "./index";
+import { createControlRecordSchema, portMapConfigSchema } from "./index";
 
 const controlId = "11111111-1111-4111-8111-111111111111";
 const shipId = "22222222-2222-4222-8222-222222222222";
@@ -47,5 +47,15 @@ describe("portMapConfigSchema", () => {
       index === 0 ? { ...point, coordinates: [100, 5.36] } : point
     );
     expect(portMapConfigSchema.safeParse(candidate).success).toBe(false);
+  });
+});
+
+describe("createControlRecordSchema", () => {
+  it("accepts only explicit control decisions for a valid dossier", () => {
+    const dossierId = "93620490-0000-4000-8000-000000000001";
+    expect(createControlRecordSchema.safeParse({ dossierId, status: "valide" }).success).toBe(true);
+    expect(createControlRecordSchema.safeParse({ dossierId, status: "pending" }).success).toBe(
+      false
+    );
   });
 });

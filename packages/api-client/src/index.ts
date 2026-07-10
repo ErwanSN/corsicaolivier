@@ -2,6 +2,8 @@ import {
   apiErrorSchema,
   authSessionSchema,
   authUserSchema,
+  controlRecordListSchema,
+  controlRecordSchema,
   dossierListSchema,
   dossierSchema,
   passwordChangeRequestSchema,
@@ -11,6 +13,8 @@ import {
   type AuthSessionDto,
   type AuthUserDto,
   type ChangePasswordDto,
+  type ControlRecord,
+  type CreateControlRecord,
   type Dossier,
   type DossierSearchQuery,
   type LoginCredentialsDto,
@@ -18,6 +22,8 @@ import {
   type PortMapConfig,
   type UpdateProfileDto
 } from "@corsica/contracts";
+
+import { createTraceparent, isWebRefreshEligible } from "./request-policy";
 
 const unknownRequestId = "00000000-0000-4000-8000-000000000000";
 
@@ -149,6 +155,26 @@ export class CorsicaApiClient {
     });
   }
 
+  getControlHistory(accessToken?: string): Promise<ControlRecord[]> {
+    return this.request("/api/v1/controls", {
+      accessToken,
+      method: "GET",
+      schema: controlRecordListSchema
+    });
+  }
+
+  createControl(
+    accessToken: string | undefined,
+    control: CreateControlRecord
+  ): Promise<ControlRecord> {
+    return this.request("/api/v1/controls", {
+      accessToken,
+      body: control,
+      method: "POST",
+      schema: controlRecordSchema
+    });
+  }
+
   getPortMapConfiguration(): Promise<PortMapConfig> {
     return this.request("/api/v1/port-map", {
       method: "GET",
@@ -275,39 +301,6 @@ export class CorsicaApiClient {
       if (this.webRefreshPromise === refreshPromise) this.webRefreshPromise = null;
     }
   }
-}
-
-function createTraceparent(): string {
-  return `00-${randomNonZeroHex(16)}-${randomNonZeroHex(8)}-01`;
-}
-
-function randomNonZeroHex(bytes: number): string {
-  let value = "";
-  while (!value || /^0+$/.test(value)) value = randomHex(bytes);
-  return value;
-}
-
-function randomHex(bytes: number): string {
-  const values = new Uint8Array(bytes);
-  const cryptoProvider = (globalThis as unknown as { crypto?: Pick<Crypto, "getRandomValues"> })
-    .crypto;
-  if (cryptoProvider?.getRandomValues) cryptoProvider.getRandomValues(values);
-  else
-    values.forEach((_, index) => {
-      values[index] = Math.floor(Math.random() * 256);
-    });
-  return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("");
-}
-
-function isWebRefreshEligible(path: string): boolean {
-  return ![
-    "/api/v1/auth/login",
-    "/api/v1/auth/register",
-    "/api/v1/auth/refresh",
-    "/api/v1/auth/web/login",
-    "/api/v1/auth/web/register",
-    "/api/v1/auth/web/refresh"
-  ].includes(path);
 }
 
 export function getApiClientErrorMessage(error: unknown): string {

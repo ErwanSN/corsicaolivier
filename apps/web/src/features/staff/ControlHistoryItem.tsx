@@ -1,7 +1,8 @@
 import { CircleCheck, CircleX } from "lucide-react";
+import { type ControlRecord } from "@corsica/contracts";
 
 import { cn } from "../../lib/cn";
-import { type ControlRecord } from "./control-history";
+import { formatControlTime } from "./control-history";
 
 export function ControlHistoryItem({ control }: Readonly<{ control: ControlRecord }>) {
   const valid = control.status === "valide";
@@ -22,7 +23,7 @@ export function ControlHistoryItem({ control }: Readonly<{ control: ControlRecor
           {control.reference}
         </span>
         <span className="block truncate text-[12px] text-muted">
-          {control.route} · {control.timeLabel}
+          {control.route} · {formatControlTime(control.controlledAt)}
         </span>
       </span>
 
