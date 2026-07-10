@@ -1,14 +1,13 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
 
-const databaseUrl =
-  process.env.DATABASE_URL ?? "postgresql://corsica:corsica@localhost:5432/corsica?schema=public";
+const databaseUrl = process.env.DATABASE_URL ?? "file:./prisma/local.db";
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    super({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
+    super({ adapter: new PrismaBetterSqlite3({ url: databaseUrl }) });
   }
 
   async onModuleInit(): Promise<void> {

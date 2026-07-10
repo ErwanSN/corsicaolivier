@@ -11,8 +11,8 @@ Use:
 - Next.js for web.
 - Expo React Native for mobile.
 - NestJS for backend services and workers.
-- PostgreSQL as the transactional database.
-- Redis or Valkey for cache, rate limiting and job coordination.
+- Prisma with SQLite as the local transactional database.
+- In-process rate limiting for the current single-node local runtime.
 - pnpm and Turborepo for the monorepo.
 
 ## Rationale
@@ -24,5 +24,7 @@ independent deployments and runtime boundaries.
 
 - Strong shared typing is required.
 - The backend must remain stateless to scale horizontally.
-- Heavy workloads must move to workers.
+- Heavy workloads must move to workers once a queue backend is selected and documented.
 - Performance-sensitive services may be split later if measurements justify it.
+- A production server database and distributed rate-limit store require a dedicated ADR before
+  multi-instance deployment.

@@ -21,6 +21,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html className={inter.variable} lang="fr">
       <body>
+        <a
+          className="focus-ring fixed left-4 top-4 z-[100] -translate-y-24 rounded-full bg-surface-inverse px-4 py-3 font-semibold text-background transition focus:translate-y-0"
+          href="#main-content"
+        >
+          Aller au contenu principal
+        </a>
         <AuthSessionProvider>
           <RoleRedirect />
           {children}

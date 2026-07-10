@@ -1,4 +1,4 @@
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../../../components/ds/Button";
 
 export type AuthWelcomeActionsProps = Readonly<{
   onCreateAccount: () => void;
@@ -8,8 +8,12 @@ export type AuthWelcomeActionsProps = Readonly<{
 export function AuthWelcomeActions({ onCreateAccount, onLogin }: AuthWelcomeActionsProps) {
   return (
     <div className="grid w-full gap-3">
-      <Button label="Créer un compte" onClick={onCreateAccount} size="large" variant="secondary" />
-      <Button label="Se connecter" onClick={onLogin} size="large" variant="primary" />
+      <Button className="w-full" onClick={onCreateAccount} size="lg" variant="outline">
+        Créer un compte
+      </Button>
+      <Button className="w-full" onClick={onLogin} size="lg" variant="primary">
+        Se connecter
+      </Button>
     </div>
   );
 }

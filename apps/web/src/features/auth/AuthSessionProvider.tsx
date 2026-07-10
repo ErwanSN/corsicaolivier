@@ -1,6 +1,5 @@
 "use client";
 
-import { type AuthSessionDto } from "@corsica/contracts";
 import {
   createContext,
   useCallback,
@@ -12,37 +11,36 @@ import {
 } from "react";
 
 import { apiClient } from "../../lib/api-client";
-import { clearStoredAuthSession, readStoredAccessToken, storeAuthSession } from "./auth-storage";
+import { type WebAuthSession } from "./web-auth-session";
 
 export type StoredAuthSession = Readonly<{
   clearSession: () => void;
-  saveSession: (session: AuthSessionDto) => void;
-  session: AuthSessionDto | null;
+  saveSession: (session: WebAuthSession) => void;
+  session: WebAuthSession | null;
+  status: "anonymous" | "authenticated" | "loading";
 }>;
 
 const AuthSessionContext = createContext<StoredAuthSession | null>(null);
+const legacyAuthTokenStorageKey = "corsica.auth.accessToken";
 
 export function AuthSessionProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [session, setSession] = useState<AuthSessionDto | null>(null);
+  const [session, setSession] = useState<WebAuthSession | null>(null);
+  const [status, setStatus] = useState<StoredAuthSession["status"]>("loading");
 
   useEffect(() => {
     let isActive = true;
 
     async function hydrateSession(): Promise<void> {
-      const storedAccessToken = readStoredAccessToken();
-
-      if (!storedAccessToken) {
-        return;
-      }
-
+      window.localStorage.removeItem(legacyAuthTokenStorageKey);
       try {
-        const user = await apiClient.me(storedAccessToken);
+        const user = await apiClient.me();
 
         if (isActive) {
-          setSession({ accessToken: storedAccessToken, tokenType: "Bearer", user });
+          setSession({ user });
+          setStatus("authenticated");
         }
       } catch {
-        clearStoredAuthSession();
+        if (isActive) setStatus("anonymous");
       }
     }
 
@@ -53,19 +51,20 @@ export function AuthSessionProvider({ children }: Readonly<{ children: ReactNode
     };
   }, []);
 
-  const saveSession = useCallback((nextSession: AuthSessionDto) => {
-    storeAuthSession(nextSession);
+  const saveSession = useCallback((nextSession: WebAuthSession) => {
     setSession(nextSession);
+    setStatus("authenticated");
   }, []);
 
   const clearSession = useCallback(() => {
-    clearStoredAuthSession();
+    void apiClient.logout().catch(() => undefined);
     setSession(null);
+    setStatus("anonymous");
   }, []);
 
   const value = useMemo<StoredAuthSession>(
-    () => ({ clearSession, saveSession, session }),
-    [clearSession, saveSession, session]
+    () => ({ clearSession, saveSession, session, status }),
+    [clearSession, saveSession, session, status]
   );
 
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;

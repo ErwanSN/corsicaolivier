@@ -1,7 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-
-import { type Dossier } from "./dossiers";
+import { type Dossier } from "@corsica/contracts";
 
 export function DossierResultRow({ dossier }: Readonly<{ dossier: Dossier }>) {
   return (

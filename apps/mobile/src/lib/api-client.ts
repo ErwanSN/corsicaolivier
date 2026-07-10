@@ -1,19 +1,8 @@
 import { CorsicaApiClient } from "@corsica/api-client";
 import Constants from "expo-constants";
 
+import { resolveApiBaseUrl } from "./api-base-url";
+
 export const apiClient = new CorsicaApiClient({
-  baseUrl: resolveApiBaseUrl()
+  baseUrl: resolveApiBaseUrl(process.env.EXPO_PUBLIC_API_URL, Constants.expoConfig?.hostUri)
 });
-
-function resolveApiBaseUrl(): string {
-  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
-
-  const hostUri = Constants.expoConfig?.hostUri;
-  const host = hostUri?.split(":")[0];
-
-  return host ? `http://${host}:3001` : "http://localhost:3001";
-}

@@ -1,6 +1,6 @@
 // Promeut / change le rôle d'un compte existant.
 // Usage: pnpm --filter @corsica/api promote <email> <USER|EMPLOYEE|ADMIN>
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
 
 const ROLES = ["USER", "EMPLOYEE", "ADMIN"];
@@ -11,14 +11,13 @@ if (!email || !ROLES.includes(role)) {
   process.exit(1);
 }
 
-const databaseUrl =
-  process.env.DATABASE_URL ?? "postgresql://corsica:corsica@localhost:5432/corsica?schema=public";
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
+const databaseUrl = process.env.DATABASE_URL ?? "file:./prisma/local.db";
+const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: databaseUrl }) });
 
 try {
   const user = await prisma.user.update({
     where: { email: email.trim().toLowerCase() },
-    data: { role },
+    data: { role, sessionVersion: { increment: 1 } },
     select: { email: true, role: true }
   });
   console.log(`OK: ${user.email} -> ${user.role}`);

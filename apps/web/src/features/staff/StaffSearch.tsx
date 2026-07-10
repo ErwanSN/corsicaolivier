@@ -2,18 +2,41 @@
 
 import { Car, FileText, Phone, User, type LucideIcon } from "lucide-react";
 import { Tabs } from "radix-ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { type Dossier, type DossierSearchField } from "@corsica/contracts";
 
 import { SearchField } from "../../components/ds/SearchField";
-import { searchDossiers } from "./dossiers";
+import { apiClient } from "../../lib/api-client";
 import { DossierResultRow } from "./DossierResultRow";
 
 function SearchResults({ field, query }: Readonly<{ field: string; query: string }>) {
-  if (!query.trim()) {
-    return null;
-  }
+  if (query.trim().length < 2) return null;
+  return (
+    <SearchResultsContent
+      field={field as DossierSearchField}
+      key={`${field}:${query}`}
+      query={query}
+    />
+  );
+}
 
-  const results = searchDossiers(field, query);
+function SearchResultsContent({
+  field,
+  query
+}: Readonly<{ field: DossierSearchField; query: string }>) {
+  const { error, loading, results } = useDossierSearch(field, query);
+  if (loading)
+    return (
+      <p aria-live="polite" className="mt-5 text-center text-[13px] text-muted">
+        Recherche…
+      </p>
+    );
+  if (error)
+    return (
+      <p className="mt-5 text-center text-[13px] text-danger" role="alert">
+        {error}
+      </p>
+    );
 
   if (results.length === 0) {
     return <p className="mt-5 text-center text-[13px] text-muted">Aucun dossier trouvé.</p>;
@@ -28,11 +51,42 @@ function SearchResults({ field, query }: Readonly<{ field: string; query: string
   );
 }
 
+function useDossierSearch(field: DossierSearchField, query: string) {
+  const [results, setResults] = useState<Dossier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setError(null);
+      void apiClient
+        .searchDossiers(undefined, { field, query: normalizedQuery })
+        .then((value) => {
+          if (active) setResults(value);
+        })
+        .catch(() => {
+          if (active) setError("La recherche est momentanément indisponible.");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [field, query]);
+
+  return { error, loading, results };
+}
+
 type SearchTab = Readonly<{
   helper: string;
   icon: LucideIcon;
   inputMode: "tel" | "text";
-  key: string;
+  key: DossierSearchField;
   label: string;
   placeholder: string;
   title: string;

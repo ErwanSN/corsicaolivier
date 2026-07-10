@@ -22,9 +22,7 @@
     "paths": {
       "@corsica/api-client": ["packages/api-client/src/index.ts"],
       "@corsica/assets": ["packages/assets/src/index.ts"],
-      "@corsica/config": ["packages/config/src/index.ts"],
       "@corsica/contracts": ["packages/contracts/src/index.ts"],
-      "@corsica/domain": ["packages/domain/src/index.ts"],
       "@corsica/ui": ["packages/ui/src/index.ts"]
     },
     "resolveJsonModule": true,

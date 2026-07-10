@@ -20,6 +20,9 @@
 {
   "code": "BOOKING_NOT_FOUND",
   "message": "Booking not found",
-  "requestId": "req_..."
+  "requestId": "11111111-1111-4111-8111-111111111111"
 }
 ```
+
+Framework validation, unknown routes and unexpected failures use the same envelope. Internal
+exception messages and stack traces are never returned to clients.

@@ -20,7 +20,9 @@ export function AppHeader() {
             Nous Contacter
           </Button>
           <LanguageSelect />
-          <AccountButton />
+          <div className="hidden lg:block">
+            <AccountButton />
+          </div>
         </div>
       </div>
     </header>

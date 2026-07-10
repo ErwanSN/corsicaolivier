@@ -42,7 +42,7 @@ const copyByMode = {
 export function AuthFormScreen({ mode, onBack, onSubmit, onSwitchMode }: AuthFormScreenProps) {
   const copy = copyByMode[mode];
   const passwordInputRef = useRef<TextInput>(null);
-  const form = useAuthForm(onSubmit);
+  const form = useAuthForm(mode, onSubmit);
 
   return (
     <View style={styles.root}>

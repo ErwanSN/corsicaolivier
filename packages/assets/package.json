@@ -14,7 +14,7 @@
     "clean": "rimraf dist coverage",
     "lint": "eslint . --max-warnings=0",
     "optimize": "node scripts/optimize-assets.mjs",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import { Select as RadixSelect } from "radix-ui";
 import { type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
+import { floatingItemClassName, floatingSurfaceClassName } from "./floating-surface";
 
 export type SelectOption = Readonly<{ label: string; value: string }>;
 
@@ -35,12 +36,14 @@ export function Select({
       <RadixSelect.Trigger
         aria-label={ariaLabel}
         className={cn(
-          "focus-ring group inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium text-foreground transition hover:bg-foreground/5 data-[placeholder]:text-muted",
+          "focus-ring group inline-flex min-h-11 min-w-0 items-center gap-2 rounded-full px-4 py-2.5 text-[14px] font-medium text-foreground transition hover:bg-foreground/5 data-[placeholder]:text-muted",
           className
         )}
       >
         {icon ? <span className="text-brand">{icon}</span> : null}
-        <RadixSelect.Value placeholder={placeholder} />
+        <span className="min-w-0 flex-1 truncate">
+          <RadixSelect.Value placeholder={placeholder} />
+        </span>
         <RadixSelect.Icon>
           <ChevronDown className="size-4 text-muted transition group-data-[state=open]:rotate-180" />
         </RadixSelect.Icon>
@@ -48,14 +51,21 @@ export function Select({
 
       <RadixSelect.Portal>
         <RadixSelect.Content
-          className="z-50 overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-[0_18px_52px_rgba(0,0,0,0.18)]"
+          className={cn(
+            floatingSurfaceClassName,
+            "max-h-[min(320px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-24px)] p-1.5"
+          )}
+          collisionPadding={12}
           position="popper"
           sideOffset={8}
         >
-          <RadixSelect.Viewport className="flex flex-col gap-0.5">
+          <RadixSelect.Viewport className="flex max-h-[min(308px,var(--radix-select-content-available-height))] flex-col gap-0.5">
             {options.map((option) => (
               <RadixSelect.Item
-                className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-[14px] text-foreground outline-none select-none data-[highlighted]:bg-foreground/5 data-[state=checked]:font-semibold"
+                className={cn(
+                  floatingItemClassName,
+                  "text-foreground data-[state=checked]:font-semibold"
+                )}
                 key={option.value}
                 value={option.value}
               >

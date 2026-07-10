@@ -1,12 +1,12 @@
 import { type AuthSessionDto } from "@corsica/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { ImageBackground, StatusBar, StyleSheet, View } from "react-native";
 
 import { brandImages } from "../../assets/brand-images";
 import { BrandSignature } from "../../components/brand/BrandSignature";
 import { theme } from "../../design-system/theme";
 import { apiClient } from "../../lib/api-client";
-import { clearStoredAuthSession, readStoredAccessToken, storeAuthSession } from "./auth-storage";
+import { clearStoredAuthSession, readStoredTokens, storeAuthSession } from "./auth-storage";
 import { type AuthFormMode, type AuthSubmitHandler } from "./auth.types";
 import { AuthWelcomeActions } from "./components/AuthWelcomeActions";
 import { AuthFormScreen } from "./components/AuthFormScreen";
@@ -18,38 +18,7 @@ export function AuthScreen() {
   const [authMode, setAuthMode] = useState<AuthMode>("welcome");
   const [session, setSession] = useState<AuthSessionDto | null>(null);
   const formMode = authMode === "welcome" ? null : authMode;
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function hydrateSession(): Promise<void> {
-      const storedAccessToken = await readStoredAccessToken();
-
-      if (!storedAccessToken) {
-        return;
-      }
-
-      try {
-        const user = await apiClient.me(storedAccessToken);
-
-        if (isActive) {
-          setSession({
-            accessToken: storedAccessToken,
-            tokenType: "Bearer",
-            user
-          });
-        }
-      } catch {
-        await clearStoredAuthSession();
-      }
-    }
-
-    void hydrateSession();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  useHydrateMobileSession(setSession);
 
   const handleCreateAccount = useCallback(() => {
     setAuthMode("createAccount");
@@ -76,7 +45,10 @@ export function AuthScreen() {
       const nextSession =
         authMode === "createAccount"
           ? await apiClient.register(credentials)
-          : await apiClient.login(credentials);
+          : await apiClient.login({
+              identifier: credentials.email,
+              password: credentials.password
+            });
 
       await storeAuthSession(nextSession);
       setSession(nextSession);
@@ -86,10 +58,11 @@ export function AuthScreen() {
   );
 
   const handleLogout = useCallback(() => {
-    void clearStoredAuthSession();
+    if (session) void apiClient.logout(session.refreshToken).catch(() => undefined);
+    void clearStoredAuthSession().catch(() => undefined);
     setSession(null);
     setAuthMode("welcome");
-  }, []);
+  }, [session]);
 
   if (formMode) {
     return (
@@ -125,6 +98,40 @@ export function AuthScreen() {
       </ImageBackground>
     </View>
   );
+}
+
+function useHydrateMobileSession(
+  setSession: Dispatch<SetStateAction<AuthSessionDto | null>>
+): void {
+  useEffect(() => {
+    let isActive = true;
+    async function hydrate(): Promise<void> {
+      const stored = await readStoredTokens();
+      if (!stored.accessToken || !stored.refreshToken) {
+        await clearStoredAuthSession();
+        return;
+      }
+      const { accessToken, refreshToken } = stored;
+      try {
+        const user = await apiClient.me(accessToken);
+        if (isActive) {
+          setSession({ accessToken, refreshToken, tokenType: "Bearer", user });
+        }
+      } catch {
+        try {
+          const refreshed = await apiClient.refresh(refreshToken);
+          await storeAuthSession(refreshed);
+          if (isActive) setSession(refreshed);
+        } catch {
+          await clearStoredAuthSession();
+        }
+      }
+    }
+    void hydrate();
+    return () => {
+      isActive = false;
+    };
+  }, [setSession]);
 }
 
 const styles = StyleSheet.create({

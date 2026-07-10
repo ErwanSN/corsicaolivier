@@ -8,7 +8,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 
 import { PrismaService } from "../database/prisma.service";
-import { getAuthJwtSecret } from "./auth.constants";
+import { accessCookieName, getAuthJwtSecret } from "./auth.constants";
 import { type AuthenticatedRequest, type AuthTokenPayload } from "./auth.types";
 import { toAuthUser, userSelect } from "./auth.service";
 
@@ -22,7 +22,8 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const token = extractBearerToken(request.headers.authorization);
+    const token =
+      extractBearerToken(request.headers.authorization) ?? request.cookies?.[accessCookieName];
 
     if (!token) {
       throw new UnauthorizedException({
@@ -42,7 +43,17 @@ export class JwtAuthGuard implements CanActivate {
         }
       });
 
-      if (!user) {
+      const session = await this.prisma.refreshSession.findFirst({
+        select: { id: true },
+        where: {
+          expiresAt: { gt: new Date() },
+          id: payload.sessionId,
+          revokedAt: null,
+          userId: payload.sub
+        }
+      });
+
+      if (!user || !session || !isSessionVersionCurrent(payload, user.sessionVersion)) {
         throw new UnauthorizedException({
           code: "AUTH_INVALID_TOKEN",
           message: "Session invalide."
@@ -63,6 +74,13 @@ export class JwtAuthGuard implements CanActivate {
       });
     }
   }
+}
+
+export function isSessionVersionCurrent(
+  payload: Pick<AuthTokenPayload, "sessionVersion">,
+  currentVersion: number
+): boolean {
+  return Number.isSafeInteger(payload.sessionVersion) && payload.sessionVersion === currentVersion;
 }
 
 function extractBearerToken(authorization: string | string[] | undefined): string | null {

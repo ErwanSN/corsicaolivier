@@ -4,7 +4,8 @@
 
 - Controllers contain routing only.
 - Services contain orchestration only.
-- Pure domain logic lives in `packages/domain`.
+- Pure domain logic remains framework-independent and is colocated with its owning feature or
+  shared contract.
 - Validation lives at boundaries with shared schemas.
 - Infrastructure adapters are isolated from domain code.
 

@@ -21,3 +21,5 @@
 - Shared UI primitives live in `packages/ui`.
 - Product flows stay inside the app that owns them.
 - Accessibility is part of the feature, not a follow-up.
+- Production browser tests enforce delivery budgets for JavaScript, total transferred bytes,
+  requests, DOM size and DOMContentLoaded.

@@ -3,7 +3,7 @@ export const colors = {
   border: "#E6E6E6",
   brand: "#D3222A",
   foreground: "#000000",
-  muted: "#B8B8B8",
+  muted: "#5F6368",
   overlay: "rgba(0, 0, 0, 0.42)",
   surface: "#FFFFFF",
   surfaceInverse: "#000000"

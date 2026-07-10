@@ -2,13 +2,24 @@ import {
   apiErrorSchema,
   authSessionSchema,
   authUserSchema,
+  dossierListSchema,
+  dossierSchema,
+  passwordChangeRequestSchema,
+  portMapConfigSchema,
   type ApiErrorDto,
   type AuthCredentialsDto,
   type AuthSessionDto,
   type AuthUserDto,
+  type ChangePasswordDto,
+  type Dossier,
+  type DossierSearchQuery,
   type LoginCredentialsDto,
+  type PasswordChangeRequestDto,
+  type PortMapConfig,
   type UpdateProfileDto
 } from "@corsica/contracts";
+
+const unknownRequestId = "00000000-0000-4000-8000-000000000000";
 
 type Fetcher = typeof fetch;
 
@@ -19,12 +30,14 @@ export type CorsicaApiClientOptions = Readonly<{
 
 export class ApiClientError extends Error {
   readonly code: string;
+  readonly requestId: string;
   readonly status: number;
 
   constructor(status: number, error: ApiErrorDto) {
     super(error.message);
     this.code = error.code;
     this.name = "ApiClientError";
+    this.requestId = error.requestId;
     this.status = status;
   }
 }
@@ -32,6 +45,7 @@ export class ApiClientError extends Error {
 export class CorsicaApiClient {
   private readonly baseUrl: string;
   private readonly fetcher: Fetcher;
+  private webRefreshPromise: Promise<boolean> | null = null;
 
   constructor({ baseUrl, fetcher = fetch }: CorsicaApiClientOptions) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
@@ -54,15 +68,46 @@ export class CorsicaApiClient {
     });
   }
 
-  me(accessToken: string): Promise<AuthUserDto> {
+  refresh(refreshToken: string): Promise<AuthSessionDto> {
+    return this.request("/api/v1/auth/refresh", {
+      body: { refreshToken },
+      method: "POST",
+      schema: authSessionSchema
+    });
+  }
+
+  registerWeb(credentials: AuthCredentialsDto): Promise<AuthUserDto> {
+    return this.request("/api/v1/auth/web/register", {
+      body: credentials,
+      method: "POST",
+      schema: authUserSchema
+    });
+  }
+
+  loginWeb(credentials: LoginCredentialsDto): Promise<AuthUserDto> {
+    return this.request("/api/v1/auth/web/login", {
+      body: credentials,
+      method: "POST",
+      schema: authUserSchema
+    });
+  }
+
+  me(accessToken?: string): Promise<AuthUserDto> {
     return this.request("/api/v1/auth/me", {
-      accessToken,
+      ...(accessToken ? { accessToken } : {}),
       method: "GET",
       schema: authUserSchema
     });
   }
 
-  updateProfile(accessToken: string, profile: UpdateProfileDto): Promise<AuthUserDto> {
+  logout(refreshToken?: string): Promise<void> {
+    return this.requestEmpty("/api/v1/auth/logout", {
+      ...(refreshToken ? { body: { refreshToken } } : {}),
+      method: "POST"
+    });
+  }
+
+  updateProfile(accessToken: string | undefined, profile: UpdateProfileDto): Promise<AuthUserDto> {
     return this.request("/api/v1/auth/me", {
       accessToken,
       body: profile,
@@ -71,17 +116,90 @@ export class CorsicaApiClient {
     });
   }
 
+  changePassword(accessToken: string | undefined, credentials: ChangePasswordDto): Promise<void> {
+    return this.requestEmpty("/api/v1/auth/password", {
+      accessToken,
+      body: credentials,
+      method: "PATCH"
+    });
+  }
+
+  requestPasswordChange(accessToken?: string): Promise<PasswordChangeRequestDto> {
+    return this.request("/api/v1/auth/password-change-requests", {
+      accessToken,
+      method: "POST",
+      schema: passwordChangeRequestSchema
+    });
+  }
+
+  searchDossiers(accessToken: string | undefined, search: DossierSearchQuery): Promise<Dossier[]> {
+    const parameters = new URLSearchParams({ field: search.field, query: search.query });
+    return this.request(`/api/v1/dossiers/search?${parameters.toString()}`, {
+      accessToken,
+      method: "GET",
+      schema: dossierListSchema
+    });
+  }
+
+  getDossier(accessToken: string | undefined, id: string): Promise<Dossier> {
+    return this.request(`/api/v1/dossiers/${encodeURIComponent(id)}`, {
+      accessToken,
+      method: "GET",
+      schema: dossierSchema
+    });
+  }
+
+  getPortMapConfiguration(): Promise<PortMapConfig> {
+    return this.request("/api/v1/port-map", {
+      method: "GET",
+      schema: portMapConfigSchema
+    });
+  }
+
+  updatePortMapConfiguration(
+    accessToken: string | undefined,
+    configuration: PortMapConfig
+  ): Promise<PortMapConfig> {
+    return this.request("/api/v1/port-map", {
+      accessToken,
+      body: configuration,
+      method: "PUT",
+      schema: portMapConfigSchema
+    });
+  }
+
+  private async requestEmpty(
+    path: string,
+    options: Readonly<{
+      accessToken?: string | undefined;
+      body?: unknown;
+      method: "PATCH" | "POST";
+    }>
+  ): Promise<void> {
+    const requestInit: RequestInit = {
+      credentials: "include",
+      headers: {
+        ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
+        ...(options.body === undefined ? {} : { "Content-Type": "application/json" })
+      },
+      method: options.method
+    };
+    if (options.body !== undefined) requestInit.body = JSON.stringify(options.body);
+    await this.performRequest(path, requestInit);
+  }
+
   private async request<Response>(
     path: string,
     options: Readonly<{
-      accessToken?: string;
+      accessToken?: string | undefined;
       body?: unknown;
-      method: "GET" | "PATCH" | "POST";
+      method: "GET" | "PATCH" | "POST" | "PUT";
       schema: { parse: (value: unknown) => Response };
     }>
   ): Promise<Response> {
     const headers: Record<string, string> = {};
     const requestInit: RequestInit = {
+      credentials: "include",
       headers,
       method: options.method
     };
@@ -97,26 +215,99 @@ export class CorsicaApiClient {
 
     // Appel en fonction autonome (this indéfini) : `fetch` natif lève
     // "Illegal invocation" s'il est appelé comme méthode (this = ce client).
-    const { fetcher } = this;
-    const response = await fetcher(`${this.baseUrl}${path}`, requestInit);
+    const response = await this.performRequest(path, requestInit);
     const payload: unknown = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      const error = apiErrorSchema.safeParse(payload);
+    return options.schema.parse(payload);
+  }
 
+  private async performRequest(
+    path: string,
+    requestInit: RequestInit,
+    canRefreshWebSession = true
+  ): Promise<Response> {
+    const { fetcher } = this;
+    const headers = new Headers(requestInit.headers);
+    if (!headers.has("traceparent")) headers.set("traceparent", createTraceparent());
+    requestInit = { ...requestInit, headers };
+    let response = await fetcher(`${this.baseUrl}${path}`, requestInit);
+    if (
+      response.status === 401 &&
+      canRefreshWebSession &&
+      !new Headers(requestInit.headers).has("Authorization") &&
+      isWebRefreshEligible(path)
+    ) {
+      if (await this.refreshWebSession()) {
+        response = await fetcher(`${this.baseUrl}${path}`, requestInit);
+      }
+    }
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null);
+      const error = apiErrorSchema.safeParse(payload);
       throw new ApiClientError(
         response.status,
         error.success
           ? error.data
           : {
               code: "API_REQUEST_FAILED",
-              message: "Impossible de traiter la réponse du serveur."
+              message: "Impossible de traiter la réponse du serveur.",
+              requestId: unknownRequestId
             }
       );
     }
-
-    return options.schema.parse(payload);
+    return response;
   }
+
+  private async refreshWebSession(): Promise<boolean> {
+    if (this.webRefreshPromise) return this.webRefreshPromise;
+
+    const refreshPromise = this.fetcher(`${this.baseUrl}/api/v1/auth/web/refresh`, {
+      credentials: "include",
+      headers: { traceparent: createTraceparent() },
+      method: "POST"
+    })
+      .then((response) => response.ok)
+      .catch(() => false);
+    this.webRefreshPromise = refreshPromise;
+    try {
+      return await refreshPromise;
+    } finally {
+      if (this.webRefreshPromise === refreshPromise) this.webRefreshPromise = null;
+    }
+  }
+}
+
+function createTraceparent(): string {
+  return `00-${randomNonZeroHex(16)}-${randomNonZeroHex(8)}-01`;
+}
+
+function randomNonZeroHex(bytes: number): string {
+  let value = "";
+  while (!value || /^0+$/.test(value)) value = randomHex(bytes);
+  return value;
+}
+
+function randomHex(bytes: number): string {
+  const values = new Uint8Array(bytes);
+  const cryptoProvider = (globalThis as unknown as { crypto?: Pick<Crypto, "getRandomValues"> })
+    .crypto;
+  if (cryptoProvider?.getRandomValues) cryptoProvider.getRandomValues(values);
+  else
+    values.forEach((_, index) => {
+      values[index] = Math.floor(Math.random() * 256);
+    });
+  return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function isWebRefreshEligible(path: string): boolean {
+  return ![
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/web/login",
+    "/api/v1/auth/web/register",
+    "/api/v1/auth/web/refresh"
+  ].includes(path);
 }
 
 export function getApiClientErrorMessage(error: unknown): string {

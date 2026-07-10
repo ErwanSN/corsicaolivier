@@ -1,16 +1,17 @@
 "use client";
 
-import { type AuthSessionDto } from "@corsica/contracts";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode } from "react";
 
 import { recentControls } from "../staff/control-history";
 import { ControlHistoryItem } from "../staff/ControlHistoryItem";
 import { useStoredAuthSession } from "../auth/use-stored-auth-session";
+import { type WebAuthSession } from "../auth/web-auth-session";
 import { AccountRow } from "./AccountRow";
+import { AccountSecurity } from "./AccountSecurity";
 
 const recentControlsPreviewCount = 3;
 
@@ -26,7 +27,7 @@ function Section({ children, title }: Readonly<{ children: ReactNode; title: str
 export function AccountDetails({
   session,
   variant
-}: Readonly<{ session: AuthSessionDto; variant: "client" | "staff" }>) {
+}: Readonly<{ session: WebAuthSession; variant: "client" | "staff" }>) {
   const router = useRouter();
   const { clearSession } = useStoredAuthSession();
 
@@ -36,15 +37,36 @@ export function AccountDetails({
   }
 
   const memberSince = format(new Date(session.user.createdAt), "d MMMM yyyy", { locale: fr });
+  const roleLabel =
+    session.user.role === "ADMIN"
+      ? "Administrateur"
+      : session.user.role === "EMPLOYEE"
+        ? "Employé"
+        : "Client";
 
   return (
     <div className="mx-auto w-full max-w-md px-4 py-6">
-      <h1 className="text-[22px] font-bold text-foreground">Compte</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-[22px] font-bold text-foreground">Compte {roleLabel.toLowerCase()}</h1>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground/5 px-3 py-1.5 text-[12px] font-semibold">
+          <ShieldCheck className="size-4" /> {roleLabel}
+        </span>
+      </div>
 
       <Section title="Informations">
         <AccountRow subtitle={`Membre depuis le ${memberSince}`} title={session.user.username} />
-        <AccountRow title="Demander une modification de mot de passe" />
+        <AccountSecurity session={session} />
       </Section>
+
+      {session.user.role === "ADMIN" ? (
+        <Section title="Administration">
+          <AccountRow
+            href="/port/admin"
+            subtitle="Parcours, points d’intérêt et navires"
+            title="Administrer la carte du port"
+          />
+        </Section>
+      ) : null}
 
       <Section title="Historique">
         {variant === "staff" ? (

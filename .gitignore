@@ -17,7 +17,12 @@ packages/*/vitest.config.d.ts.map
 packages/*/vitest.config.js
 packages/*/vitest.config.js.map
 node_modules
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+apps/api/backups/
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+playwright-report/
+test-results/

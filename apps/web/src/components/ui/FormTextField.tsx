@@ -21,7 +21,7 @@ export type FormTextFieldProps = Readonly<{
 const inputClassName = [
   "h-14 min-w-0 rounded-xl border border-border bg-surface px-3.5",
   "text-[16px] leading-[22px] text-foreground placeholder:text-muted",
-  "focus:border-foreground focus:outline-none",
+  "focus:relative focus:z-10 focus:border-foreground focus:outline-none",
   "disabled:cursor-not-allowed disabled:opacity-[0.62]",
   "data-[field-position=first]:rounded-b-none",
   "data-[field-position=last]:-mt-px data-[field-position=last]:rounded-t-none"

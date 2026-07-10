@@ -22,21 +22,21 @@ export function AccountLogin() {
 
   const handleSubmit = useCallback<AuthSubmitHandler>(
     async ({ identifier, password }) => {
-      const nextSession =
+      const user =
         mode === "createAccount"
-          ? await apiClient.register({ email: identifier, password })
-          : await apiClient.login({ identifier, password });
+          ? await apiClient.registerWeb({ email: identifier, password })
+          : await apiClient.loginWeb({ identifier, password });
 
       // saveSession met à jour le contexte ; le routage par rôle (salarié ->
       // /salarie) est géré globalement par RoleRedirect.
-      saveSession(nextSession);
+      saveSession({ user });
     },
     [mode, saveSession]
   );
 
   return (
     <div className="mx-auto w-full max-w-md px-4 py-8">
-      <h1 className="mb-6 text-[22px] font-bold text-foreground">Compte</h1>
+      <h1 className="sr-only">Compte</h1>
       <AuthFormPanel mode={mode} onSubmit={handleSubmit} />
       <p className="mt-6 flex flex-wrap items-center justify-center gap-1.5 text-center text-[14px] text-muted">
         <span>{switchCopy.prefix}</span>

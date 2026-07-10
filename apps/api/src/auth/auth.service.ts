@@ -1,19 +1,33 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
+
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import { type AuthSessionDto, type AuthUserDto, type Role } from "@corsica/contracts";
+import {
+  type AuthSessionDto,
+  type AuthUserDto,
+  type PasswordChangeRequestDto,
+  type Role
+} from "@corsica/contracts";
 
 import { PrismaService } from "../database/prisma.service";
-import { authTokenExpiresIn, getAuthJwtSecret } from "./auth.constants";
+import { accessTokenExpiresIn, getAuthJwtSecret } from "./auth.constants";
 import { type AuthCredentialsDto } from "./dto/auth-credentials.dto";
 import { type LoginCredentialsDto } from "./dto/login-credentials.dto";
-import { hashPassword, verifyPassword } from "./password-hasher";
+import { hashPassword, verifyPassword, verifyPasswordOrDummy } from "./password-hasher";
+import { RefreshSessionService } from "./refresh-session.service";
 
 type UserRecord = Readonly<{
   createdAt: Date;
   email: string;
   id: string;
   role: Role;
+  sessionVersion: number;
   username: string;
 }>;
 
@@ -22,7 +36,8 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly refreshSessions: RefreshSessionService
   ) {}
 
   async register(credentials: AuthCredentialsDto): Promise<AuthSessionDto> {
@@ -103,7 +118,8 @@ export class AuthService {
       }
     });
 
-    if (!user || !(await verifyPassword(credentials.password, user.passwordHash))) {
+    const passwordMatches = await verifyPasswordOrDummy(credentials.password, user?.passwordHash);
+    if (!user || !passwordMatches) {
       throw new UnauthorizedException({
         code: "AUTH_INVALID_CREDENTIALS",
         message: "Identifiant ou mot de passe incorrect."
@@ -113,22 +129,110 @@ export class AuthService {
     return this.createSession(user);
   }
 
+  async changePassword(
+    userId: string,
+    role: Role,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<AuthSessionDto> {
+    if (role !== "USER") {
+      throw new ForbiddenException({
+        code: "AUTH_PASSWORD_REQUEST_REQUIRED",
+        message: "Les comptes professionnels doivent effectuer une demande de modification."
+      });
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException({
+        code: "AUTH_CURRENT_PASSWORD_INVALID",
+        message: "Le mot de passe actuel est incorrect."
+      });
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    const updatedUser = await this.prisma.$transaction(async (transaction) => {
+      const nextUser = await transaction.user.update({
+        data: { passwordHash, sessionVersion: { increment: 1 } },
+        select: userSelect,
+        where: { id: userId }
+      });
+      await transaction.refreshSession.updateMany({
+        data: { revokedAt: new Date() },
+        where: { revokedAt: null, userId }
+      });
+      return nextUser;
+    });
+    return this.createSession(updatedUser);
+  }
+
+  async requestPasswordChange(userId: string, role: Role): Promise<PasswordChangeRequestDto> {
+    if (role === "USER") {
+      throw new ForbiddenException({
+        code: "AUTH_PASSWORD_CHANGE_AVAILABLE",
+        message: "Un client peut modifier directement son mot de passe."
+      });
+    }
+
+    const existing = await this.prisma.passwordChangeRequest.findFirst({
+      where: { status: "PENDING", userId }
+    });
+    const request =
+      existing ??
+      (await this.prisma.passwordChangeRequest.create({
+        data: { userId }
+      }));
+
+    return {
+      id: request.id,
+      requestedAt: request.requestedAt.toISOString(),
+      status: "PENDING"
+    };
+  }
+
   async createSession(user: UserRecord): Promise<AuthSessionDto> {
+    const session = await this.refreshSessions.create(user.id);
+    return this.createSessionResponse(user, session.sessionId, session.refreshToken);
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthSessionDto> {
+    const session = await this.refreshSessions.rotate(refreshToken);
+    const user = await this.prisma.user.findUnique({
+      select: userSelect,
+      where: { id: session.userId }
+    });
+    if (!user) throw new UnauthorizedException();
+    return this.createSessionResponse(user, session.sessionId, session.refreshToken);
+  }
+
+  async revokeSession(refreshToken: string | undefined): Promise<void> {
+    await this.refreshSessions.revoke(refreshToken);
+  }
+
+  private async createSessionResponse(
+    user: UserRecord,
+    sessionId: string,
+    refreshToken: string
+  ): Promise<AuthSessionDto> {
     const authUser = toAuthUser(user);
     const accessToken = await this.jwtService.signAsync(
       {
         email: authUser.email,
+        jti: randomUUID(),
         role: authUser.role,
+        sessionId,
+        sessionVersion: user.sessionVersion,
         sub: authUser.id
       },
       {
-        expiresIn: authTokenExpiresIn,
+        expiresIn: accessTokenExpiresIn,
         secret: getAuthJwtSecret(this.configService)
       }
     );
 
     return {
       accessToken,
+      refreshToken,
       tokenType: "Bearer",
       user: authUser
     };
@@ -140,6 +244,7 @@ export const userSelect = {
   email: true,
   id: true,
   role: true,
+  sessionVersion: true,
   username: true
 } as const;
 
@@ -172,16 +277,30 @@ function truncateUsername(username: string): string {
   return username.slice(0, usernameMaxLength);
 }
 
-function isUniqueConstraintOn(error: unknown, field: string): boolean {
-  if (typeof error !== "object" || error === null || !("code" in error) || error.code !== "P2002") {
-    return false;
-  }
+export function isUniqueConstraintOn(error: unknown, field: string): boolean {
+  if (!isPrismaUniqueError(error)) return false;
 
-  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const target = uniqueConstraintTarget(error);
 
   if (Array.isArray(target)) {
     return target.includes(field);
   }
 
   return typeof target === "string" && target.includes(field);
+}
+
+type PrismaUniqueError = Readonly<{
+  code: "P2002";
+  meta?: {
+    driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } };
+    target?: unknown;
+  };
+}>;
+
+function isPrismaUniqueError(error: unknown): error is PrismaUniqueError {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
+}
+
+function uniqueConstraintTarget(error: PrismaUniqueError): unknown {
+  return error.meta?.target ?? error.meta?.driverAdapterError?.cause?.constraint?.fields;
 }

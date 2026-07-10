@@ -3,7 +3,10 @@ import { ConfigModule } from "@nestjs/config";
 
 import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
+import { DossiersModule } from "./dossiers/dossiers.module";
 import { HealthModule } from "./health/health.module";
+import { MetricsModule } from "./metrics/metrics.module";
+import { PortMapModule } from "./port-map/port-map.module";
 
 @Module({
   imports: [
@@ -12,8 +15,11 @@ import { HealthModule } from "./health/health.module";
       isGlobal: true
     }),
     DatabaseModule,
+    DossiersModule,
     AuthModule,
-    HealthModule
+    HealthModule,
+    MetricsModule,
+    PortMapModule
   ]
 })
 export class AppModule {}

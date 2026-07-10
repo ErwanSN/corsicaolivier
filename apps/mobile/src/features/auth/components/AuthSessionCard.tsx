@@ -5,6 +5,7 @@ import { BrandSignature } from "../../../components/brand/BrandSignature";
 import { AppButton } from "../../../components/ui/AppButton";
 import { AppText } from "../../../components/ui/AppText";
 import { theme } from "../../../design-system/theme";
+import { mobileAccountCopy } from "../account-copy";
 
 export type AuthSessionCardProps = Readonly<{
   onLogout: () => void;
@@ -12,14 +13,18 @@ export type AuthSessionCardProps = Readonly<{
 }>;
 
 export function AuthSessionCard({ onLogout, session }: AuthSessionCardProps) {
+  const copy = mobileAccountCopy[session.user.role];
   return (
     <View style={styles.card}>
       <BrandSignature variant="emblem" />
       <AppText align="center" variant="title">
-        Bienvenue
+        {copy.title}
       </AppText>
       <AppText align="center" variant="control">
         {session.user.email}
+      </AppText>
+      <AppText align="center" tone="muted" variant="caption">
+        {copy.subtitle}
       </AppText>
       <AppButton label="Se déconnecter" onPress={onLogout} variant="primary" />
     </View>

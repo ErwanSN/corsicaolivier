@@ -2,7 +2,7 @@ import { getApiClientErrorMessage } from "@corsica/api-client";
 import { authPasswordMinLength } from "@corsica/contracts";
 import { type SyntheticEvent, useId, useState } from "react";
 
-import { Button } from "../../../components/ui/Button";
+import { Button } from "../../../components/ds/Button";
 import { FormTextField } from "../../../components/ui/FormTextField";
 import { GoogleMark } from "../../../components/ui/GoogleMark";
 import { Separator } from "../../../components/ui/Separator";
@@ -136,23 +136,17 @@ export function AuthFormPanel({ mode, onSubmit }: AuthFormPanelProps) {
           </p>
         ) : null}
 
-        <Button
-          disabled={isSubmitting}
-          label={isSubmitting ? copy.loadingLabel : copy.submitLabel}
-          size="large"
-          type="submit"
-          variant="brand"
-        />
+        <Button disabled={isSubmitting} size="lg" type="submit" variant="brand">
+          {isSubmitting ? copy.loadingLabel : copy.submitLabel}
+        </Button>
       </form>
 
       <Separator label="ou" />
 
-      <Button
-        disabled
-        label="Continuer avec Google"
-        leftAccessory={<GoogleMark />}
-        variant="outline"
-      />
+      <Button disabled variant="outline">
+        <GoogleMark />
+        Continuer avec Google
+      </Button>
     </section>
   );
 }

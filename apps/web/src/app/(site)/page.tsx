@@ -1,5 +1,19 @@
+import { CompanyIntro } from "../../features/travel/CompanyIntro";
+import { DestinationsCarousel } from "../../features/travel/DestinationsCarousel";
 import { Hero } from "../../features/travel/Hero";
+import { OffersCarousel } from "../../features/travel/OffersCarousel";
+import { PracticalSection } from "../../features/travel/PracticalSection";
+import { TestimonialsCarousel } from "../../features/travel/TestimonialsCarousel";
 
 export default function Page() {
-  return <Hero />;
+  return (
+    <>
+      <Hero />
+      <OffersCarousel />
+      <DestinationsCarousel />
+      <PracticalSection />
+      <TestimonialsCarousel />
+      <CompanyIntro />
+    </>
+  );
 }

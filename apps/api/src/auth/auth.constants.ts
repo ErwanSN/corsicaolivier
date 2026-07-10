@@ -16,4 +16,8 @@ export function getAuthJwtSecret(configService: ConfigService): string {
   return localDevelopmentSecret;
 }
 
-export const authTokenExpiresIn = "1d";
+export const accessTokenExpiresIn = "15m";
+export const accessTokenMaxAgeSeconds = 15 * 60;
+export const refreshTokenMaxAgeSeconds = 30 * 24 * 60 * 60;
+export const accessCookieName = "corsica_session";
+export const refreshCookieName = "corsica_refresh";

@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { type Route } from "next";
 import Link from "next/link";
 import { type ReactNode } from "react";
 
@@ -50,7 +51,7 @@ export function AccountRow({
   );
 
   if (href) {
-    if (href.startsWith("/")) {
+    if (isInternalRoute(href)) {
       return (
         <Link className={className} href={href}>
           {content}
@@ -70,4 +71,8 @@ export function AccountRow({
       {content}
     </button>
   );
+}
+
+function isInternalRoute(href: string): href is Route {
+  return href.startsWith("/");
 }

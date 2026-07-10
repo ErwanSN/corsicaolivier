@@ -15,10 +15,10 @@ export const buttonVariants = cva(
         link: "text-foreground underline-offset-4 hover:underline"
       },
       size: {
-        sm: "h-9 rounded-full px-4 text-[13px]",
+        sm: "h-11 rounded-full px-4 text-[13px]",
         md: "h-11 rounded-full px-5 text-[14px]",
         lg: "h-12 rounded-full px-6 text-[15px]",
-        icon: "size-10 rounded-full",
+        icon: "size-11 rounded-full",
         iconLg: "size-12 rounded-full"
       }
     },

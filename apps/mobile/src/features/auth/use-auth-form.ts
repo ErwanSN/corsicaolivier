@@ -1,8 +1,8 @@
 import { getApiClientErrorMessage } from "@corsica/api-client";
-import { authPasswordMinLength } from "@corsica/contracts";
 import { useState } from "react";
 
-import { type AuthSubmitHandler } from "./auth.types";
+import { validateAuthForm } from "./auth-form-validation";
+import { type AuthFormMode, type AuthSubmitHandler } from "./auth.types";
 
 export type AuthFormState = Readonly<{
   email: string;
@@ -14,28 +14,22 @@ export type AuthFormState = Readonly<{
   submit: () => Promise<void>;
 }>;
 
-export function useAuthForm(onSubmit: AuthSubmitHandler): AuthFormState {
+export function useAuthForm(mode: AuthFormMode, onSubmit: AuthSubmitHandler): AuthFormState {
   const [email, setEmail] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState("");
 
   async function submit(): Promise<void> {
-    if (password.length < authPasswordMinLength) {
-      setErrorMessage(
-        `Le mot de passe doit contenir au moins ${String(authPasswordMinLength)} caractères.`
-      );
+    const validation = validateAuthForm(mode, email, password);
+    if (!validation.success) {
+      setErrorMessage(validation.message);
       return;
     }
-
     setErrorMessage(null);
     setIsSubmitting(true);
-
     try {
-      await onSubmit({
-        email,
-        password
-      });
+      await onSubmit(validation.credentials);
     } catch (error) {
       setErrorMessage(getApiClientErrorMessage(error));
     } finally {
@@ -43,13 +37,5 @@ export function useAuthForm(onSubmit: AuthSubmitHandler): AuthFormState {
     }
   }
 
-  return {
-    email,
-    errorMessage,
-    isSubmitting,
-    password,
-    setEmail,
-    setPassword,
-    submit
-  };
+  return { email, errorMessage, isSubmitting, password, setEmail, setPassword, submit };
 }

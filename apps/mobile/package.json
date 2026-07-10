@@ -12,7 +12,7 @@
     "dev:phone:lan": "expo start --lan --go --clear --port 8081",
     "ios": "expo start --ios",
     "lint": "eslint . --max-warnings=0",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web"
   },

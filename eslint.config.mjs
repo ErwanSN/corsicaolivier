@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import importX from "eslint-plugin-import-x";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import promise from "eslint-plugin-promise";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -23,7 +24,9 @@ export default tseslint.config(
       "**/coverage/**",
       "**/dist/**",
       "**/node_modules/**",
-      "**/pnpm-lock.yaml"
+      "**/playwright-report/**",
+      "**/pnpm-lock.yaml",
+      "**/test-results/**"
     ]
   },
   js.configs.recommended,
@@ -104,7 +107,7 @@ export default tseslint.config(
     }
   },
   {
-    files: ["**/*.test.{ts,tsx}"],
+    files: ["**/*.{test,spec}.{ts,tsx}"],
     rules: {
       "max-lines-per-function": "off",
       "max-nested-callbacks": ["error", { max: 5 }],
@@ -125,10 +128,12 @@ export default tseslint.config(
       }
     },
     plugins: {
+      "jsx-a11y": jsxA11y,
       react,
       "react-hooks": reactHooks
     },
     rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       "react/prop-types": "off",

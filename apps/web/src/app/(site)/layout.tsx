@@ -7,7 +7,9 @@ export default function SiteLayout({ children }: Readonly<{ children: React.Reac
     <>
       <AnnouncementBar />
       <AppHeader />
-      <main>{children}</main>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
       <MobileBottomNav />
     </>
   );
