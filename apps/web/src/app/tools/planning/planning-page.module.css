@@ -1,0 +1,408 @@
+.page {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.printHeader h1 {
+  font-size: 16pt;
+  font-weight: 750;
+}
+
+.printHeader p {
+  margin-top: 0.2rem;
+  font-size: 9pt;
+  font-weight: 650;
+}
+
+.zoneTabs {
+  display: flex;
+  height: 2.55rem;
+  flex: 0 0 auto;
+}
+
+.zoneTab,
+.activeZone {
+  display: inline-flex;
+  min-width: 4.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a1a1aa;
+  border-right: 0;
+  padding: 0 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.zoneTab:last-child,
+.activeZone:last-child {
+  border-right: 1px solid #a1a1aa;
+}
+
+.zoneTab {
+  background: #ffffff;
+  color: #52525b;
+}
+
+.zoneTab:hover {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.activeZone {
+  background: #18181b;
+  color: #ffffff;
+}
+
+.singleZone {
+  display: inline-flex;
+  height: 2.55rem;
+  min-width: 5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  background: #18181b;
+  padding: 0 0.8rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  min-height: 3.65rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+  padding: 0.5rem;
+}
+
+.toolbarNavigation,
+.weekNavigation,
+.toolbarActions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.toolbarNavigation {
+  flex: 1 1 auto;
+}
+
+.arrowButton,
+.todayButton,
+.menu > summary {
+  display: inline-flex;
+  height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+  color: #27272a;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.arrowButton {
+  width: 2.55rem;
+  flex: 0 0 2.55rem;
+  font-size: 1rem;
+}
+
+.todayButton,
+.menu > summary {
+  padding: 0 0.8rem;
+}
+
+.arrowButton:hover,
+.todayButton:hover,
+.menu > summary:hover {
+  border-color: #18181b;
+  background: #f4f4f5;
+}
+
+.weekLabel {
+  display: grid;
+  min-width: 12rem;
+  gap: 0.05rem;
+  padding: 0 0.45rem;
+}
+
+.weekLabel span {
+  color: #71717a;
+  font-size: 0.56rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weekLabel strong {
+  overflow: hidden;
+  color: #18181b;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.versionStatus {
+  display: flex;
+  min-width: 12.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.55rem;
+}
+
+.versionStatus p {
+  display: grid;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.versionStatus strong,
+.versionStatus span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.versionStatus strong {
+  color: #27272a;
+  font-size: 0.7rem;
+}
+
+.versionStatus span {
+  color: #71717a;
+  font-size: 0.58rem;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu > summary::after {
+  margin-left: 0.45rem;
+  content: '▾';
+  font-size: 0.62rem;
+}
+
+.menu[open] > summary {
+  border-color: #18181b;
+  background: #f4f4f5;
+}
+
+.publishMenu > summary {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.publishMenu > summary:hover,
+.publishMenu[open] > summary {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.publishPanel,
+.optionsPanel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 80;
+  width: min(25rem, 90vw);
+  max-height: min(34rem, calc(100svh - 6rem));
+  overflow-y: auto;
+  border: 1px solid #71717a;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.panelTitle {
+  color: #18181b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.panelHelp {
+  margin-top: 0.3rem;
+  color: #71717a;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.publishForm {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.publishForm label,
+.dateForm label {
+  color: #3f3f46;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.publishForm button {
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.dateForm {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.dateForm > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.dateForm input {
+  min-width: 0;
+  height: 2.55rem;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+  padding: 0 0.7rem;
+  color: #18181b;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.dateForm button {
+  height: 2.55rem;
+  border-left: 0;
+  padding: 0 0.85rem;
+}
+
+.exportGroup {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4e4e7;
+}
+
+.exportActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.exportActions :global(.secondary-button) {
+  width: 100%;
+  height: auto;
+  min-height: 2.55rem;
+  justify-content: flex-start;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.67rem;
+  line-height: 1.25;
+  text-align: left;
+}
+
+@media (max-width: 1100px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbarActions {
+    justify-content: flex-end;
+    border-top: 1px solid #e4e4e7;
+    padding-top: 0.45rem;
+  }
+
+  .versionStatus {
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 1023px) {
+  .toolbar {
+    top: 4rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .toolbarNavigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .zoneTabs {
+    min-height: 2.5rem;
+    align-self: stretch;
+  }
+
+  .zoneTab,
+  .activeZone {
+    flex: 1;
+    border-left: 0;
+    border-right: 1px solid #d4d4d8;
+  }
+
+  .weekNavigation {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+
+  .weekLabel {
+    min-width: 0;
+  }
+
+  .toolbarActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .versionStatus {
+    min-width: 0;
+    margin: 0;
+    padding-left: 0.2rem;
+  }
+
+  .publishPanel,
+  .optionsPanel {
+    right: 0;
+    width: min(23rem, calc(100vw - 2rem));
+  }
+
+  .exportActions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .page {
+    display: block;
+  }
+
+  .visuallyHidden {
+    display: none;
+  }
+}

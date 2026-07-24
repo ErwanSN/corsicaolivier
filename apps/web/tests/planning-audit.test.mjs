@@ -118,11 +118,8 @@ test('le planning reprend le corpus dans une vue uniquement hebdomadaire', async
   assert.match(page, /Semaine suivante/);
   assert.match(page, /Aujourd’hui/);
   assert.match(page, /name="date"/);
-  assert.match(page, /Afficher cette semaine/);
-  assert.match(
-    page,
-    /<a\s+className="secondary-button"\s+href=\{adjacentWeekHref/,
-  );
+  assert.match(page, /className=\{styles\.dateForm\}/);
+  assert.match(page, /href=\{adjacentWeekHref/);
   assert.doesNotMatch(page, /<Link[\s\S]{0,160}href=\{adjacentWeekHref/);
   assert.doesNotMatch(
     page,
@@ -220,7 +217,7 @@ test('le calendrier permet l’édition manuelle complète sans quitter la semai
   assert.match(grid, /PlanningAssignmentEditor/);
   assert.match(grid, /openCreateAssignment/);
   assert.match(grid, /openEditAssignment/);
-  assert.match(grid, /\+ Ajouter/);
+  assert.match(grid, /Ajouter une affectation au poste/);
   assert.match(editor, /Agent affecté/);
   assert.match(editor, /Poste/);
   assert.match(editor, /type="datetime-local"/);
@@ -280,10 +277,10 @@ test('les changements de dernière minute restent visibles et traçables', async
     'utf8',
   );
 
-  assert.match(page, /Brouillon de modifications/);
+  assert.match(page, /Copie de travail v/);
   assert.match(page, /dernière\s+minute/);
   assert.match(page, /Publier les modifications/);
-  assert.match(page, /Motif des modifications/);
+  assert.match(page, /Motif de publication/);
   assert.match(page, /publishedVersion/);
   assert.match(editor, /Modification de dernière minute/);
   assert.match(editor, /Motif opérationnel/);
@@ -296,6 +293,47 @@ test('les changements de dernière minute restent visibles et traçables', async
   assert.match(manualEditor, /'before'/);
   assert.match(manualEditor, /'after'/);
   assert.match(manualEditor, /outbox_events/);
+});
+
+test('la page planning masque les commandes secondaires et le bruit nominal', async () => {
+  const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
+  const pageStyles = await readFile(
+    'src/app/tools/planning/planning-page.module.css',
+    'utf8',
+  );
+  const grid = await readFile(
+    'src/components/weekly-planning-grid.tsx',
+    'utf8',
+  );
+  const gridStyles = await readFile(
+    'src/components/weekly-planning-grid.module.css',
+    'utf8',
+  );
+  const editorStyles = await readFile(
+    'src/components/planning-assignment-editor.module.css',
+    'utf8',
+  );
+
+  assert.match(page, /aria-label="Commandes du planning"/);
+  assert.match(page, /<summary>Date et exports<\/summary>/);
+  assert.match(page, /<PlanningExportButton/);
+  assert.match(page, /className=\{styles\.publishPanel\}/);
+  assert.match(page, /name="planning-toolbar-menu"/);
+  assert.match(pageStyles, /max-height: min\(34rem,/);
+  assert.match(pageStyles, /@media \(max-width: 1023px\)/);
+  assert.match(page, /data-print-hide[\s\S]{0,80}role="status"/);
+  assert.match(page, /data-print-hide[\s\S]{0,80}role="alert"/);
+  assert.doesNotMatch(page, /<aside/);
+  assert.match(pageStyles, /\.toolbar\s*\{[\s\S]*position: sticky/);
+  assert.match(grid, /if \(!missing\) return null/);
+  assert.match(grid, /scrollIntoView/);
+  assert.match(grid, /if \(!hasMovements\) return null/);
+  assert.doesNotMatch(grid, /className=\{styles\.dragHint\}/);
+  assert.match(gridStyles, /\.addAssignment\s*\{[\s\S]*opacity: 0/);
+  assert.match(gridStyles, /\.dragHandle\s*\{[\s\S]*opacity: 0/);
+  for (const source of [page, pageStyles, gridStyles, editorStyles]) {
+    assert.doesNotMatch(source, /box-shadow|shadow-(?:sm|md|lg|xl)/);
+  }
 });
 
 test('la semaine possède un export PDF en format A4 paysage', async () => {

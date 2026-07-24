@@ -13,7 +13,13 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import {
   movePlanningAssignment,
@@ -393,7 +399,6 @@ export function PlanningGrid({
 
     return {
       activeAgents: agents.filter((agent) => agent.active).length,
-      assignments: data.assignments.length,
       missingAgentSlots,
       scheduledAgents: scheduledAgentIds.size,
     };
@@ -405,6 +410,20 @@ export function PlanningGrid({
     data.shiftById,
     timeZone,
   ]);
+
+  useEffect(() => {
+    if (normalizedAgentSearch.length < 2 || matchingAssignmentCount === 0) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-search-state="match"]')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 180);
+
+    return () => window.clearTimeout(timeout);
+  }, [matchingAssignmentCount, normalizedAgentSearch]);
 
   const openEditAssignment = (assignmentId: string) => {
     const assignment = data.assignmentById.get(assignmentId);
@@ -565,9 +584,6 @@ export function PlanningGrid({
     onEdit: openEditAssignment,
   };
 
-  const hasEditableAssignments =
-    data.assignmentMoveContextById.size > 0 || data.draftContexts.length > 0;
-
   return (
     <div className={styles.planningArea}>
       <section
@@ -576,7 +592,10 @@ export function PlanningGrid({
         data-print-hide
       >
         <div className={styles.agentSearch}>
-          <label htmlFor="planning-agent-search">
+          <label
+            className={styles.visuallyHidden}
+            htmlFor="planning-agent-search"
+          >
             Retrouver un collaborateur
           </label>
           <div className={styles.searchControl}>
@@ -594,11 +613,12 @@ export function PlanningGrid({
               </button>
             ) : null}
           </div>
-          <p aria-live="polite">
-            {highlightedAgentIds
-              ? `${matchingAssignmentCount} affectation${matchingAssignmentCount > 1 ? 's' : ''} trouvée${matchingAssignmentCount > 1 ? 's' : ''}`
-              : 'La recherche met en évidence toutes les affectations de la personne.'}
-          </p>
+          {highlightedAgentIds ? (
+            <p aria-live="polite">
+              {matchingAssignmentCount} affectation
+              {matchingAssignmentCount > 1 ? 's' : ''}
+            </p>
+          ) : null}
         </div>
         <dl className={styles.planningStats}>
           <div>
@@ -606,10 +626,6 @@ export function PlanningGrid({
             <dd>
               {planningSummary.scheduledAgents}/{planningSummary.activeAgents}
             </dd>
-          </div>
-          <div>
-            <dt>Affectations</dt>
-            <dd>{planningSummary.assignments}</dd>
           </div>
           <div
             className={
@@ -623,16 +639,6 @@ export function PlanningGrid({
           </div>
         </dl>
       </section>
-      {hasEditableAssignments ? (
-        <div className={styles.dragHint} data-svg-hide>
-          <p>
-            Cliquez pour modifier · utilisez « Déplacer » pour changer de case.
-          </p>
-          <span>
-            Agent, poste, heures, pause, escale et note sont modifiables.
-          </span>
-        </div>
-      ) : null}
       {moveFeedback ? (
         <p
           className={
@@ -710,7 +716,6 @@ function WeeklyTable({
       <div className={styles.weekViewport} data-planning-week-viewport>
         <div className={styles.weekGrid} data-planning-week-row>
           <div className={styles.cornerHeader}>
-            <span>Centre Autos</span>
             <strong>{siteName}</strong>
           </div>
           {days.map((day) => (
@@ -769,6 +774,17 @@ function WeekMovementRow({
   days: CalendarDay[];
   kind: 'arrival' | 'departure';
 }>) {
+  const hasMovements = days.some((day) => {
+    const calls =
+      kind === 'arrival'
+        ? data.arrivalCallsByDay.get(day.date)
+        : data.departureCallsByDay.get(day.date);
+
+    return Boolean(calls?.length);
+  });
+
+  if (!hasMovements) return null;
+
   return (
     <div className={styles.weekGrid} data-planning-week-row>
       <div className={styles.stickyRowLabel}>
@@ -847,7 +863,7 @@ function WeekPositionRow({
                 title="Ajouter une affectation"
                 type="button"
               >
-                + Ajouter
+                +
               </button>
             ) : null}
             {assignments.map((assignment) => (
@@ -987,7 +1003,7 @@ function AssignmentEntry({
     >
       <strong>{agentName}</strong>
       {shift?.note?.startsWith('Dernière minute —') ? (
-        <em className={styles.lastMinuteBadge}>Dernière minute</em>
+        <em className={styles.lastMinuteBadge}>Urgent</em>
       ) : null}
       <span>
         {timeLabel(assignment.starts_at, data.timeZone)}–
@@ -1013,11 +1029,14 @@ function CoverageEntry({
   const covered = minimumConcurrentCoverage(requirement, matchingAssignments);
   const missing = covered < requirement.required_agents;
 
+  if (!missing) return null;
+
   return (
-    <p className={missing ? styles.missingCoverage : styles.coverage}>
+    <p className={styles.missingCoverage}>
       Besoin {timeLabel(requirement.starts_at, data.timeZone)}–
-      {timeLabel(requirement.ends_at, data.timeZone)} · {covered}/
-      {requirement.required_agents}
+      {timeLabel(requirement.ends_at, data.timeZone)} ·{' '}
+      {requirement.required_agents - covered} manquant
+      {requirement.required_agents - covered > 1 ? 's' : ''}
     </p>
   );
 }

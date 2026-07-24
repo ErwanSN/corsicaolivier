@@ -107,7 +107,7 @@ export function PlanningDraggableAssignment({
           title="Maintenir puis déplacer"
           type="button"
         >
-          Déplacer
+          ⋮⋮
         </button>
       ) : null}
     </article>

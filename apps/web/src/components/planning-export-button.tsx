@@ -102,7 +102,7 @@ export function PlanningExportButton({
       }
       [data-svg-export] [data-search-state] {
         opacity: 1 !important;
-        box-shadow: none !important;
+        outline: none !important;
       }`;
 
     const wrapper = document.createElement('div');

@@ -211,6 +211,8 @@ export function PlanningAssignmentEditor({
     <div
       aria-label="Fermer l’éditeur"
       className={styles.backdrop}
+      data-print-hide
+      data-svg-hide
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isPending) onClose();
       }}

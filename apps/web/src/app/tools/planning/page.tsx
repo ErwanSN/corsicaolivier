@@ -22,6 +22,7 @@ import {
 } from '../../../lib/planning-range';
 import { orderSites } from '../../../lib/sites';
 import { publishSchedule } from './actions';
+import styles from './planning-page.module.css';
 
 type PlanningPageProps = Readonly<{
   searchParams: Promise<{
@@ -171,30 +172,26 @@ export default async function PlanningPage({
   );
 
   return (
-    <div className="planning-print-root space-y-4">
-      <header className="border-b border-zinc-300 pb-4">
-        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Planning opérationnel
-            </h1>
-            <p className="planning-print-only mt-1 text-sm font-semibold">
-              {rangeLabel(range)}
-            </p>
-          </div>
+    <div className={`${styles.page} planning-print-root`}>
+      <h1 className={styles.visuallyHidden}>Planning opérationnel</h1>
+      <header className={`${styles.printHeader} planning-print-only`}>
+        <h1>Planning opérationnel</h1>
+        <p>{rangeLabel(range)}</p>
+      </header>
+
+      <section
+        aria-label="Commandes du planning"
+        className={styles.toolbar}
+        data-print-hide
+      >
+        <div className={styles.toolbarNavigation}>
           {sites.length > 1 ? (
-            <nav
-              aria-label="Zones"
-              className="flex flex-wrap gap-2"
-              data-print-hide
-            >
+            <nav aria-label="Zones" className={styles.zoneTabs}>
               {sites.map((item) => (
                 <Link
                   aria-current={item.id === site.id ? 'page' : undefined}
                   className={
-                    item.id === site.id
-                      ? 'bg-zinc-950 px-3 py-2 text-sm font-semibold text-white'
-                      : 'border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-950'
+                    item.id === site.id ? styles.activeZone : styles.zoneTab
                   }
                   href={weekHref(item.id, range.startsOn)}
                   key={item.id}
@@ -203,95 +200,183 @@ export default async function PlanningPage({
                 </Link>
               ))}
             </nav>
-          ) : null}
-        </div>
-      </header>
-
-      <section
-        className="border border-zinc-300 bg-zinc-50 px-4 py-3"
-        data-print-hide
-      >
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-3">
-            <p className="text-base font-semibold text-zinc-950">
-              Semaine du {rangeLabel(range)}
+          ) : (
+            <p className={styles.singleZone}>
+              {site.name.replace('Marseille ', '')}
             </p>
-            <nav
-              aria-label="Changer de semaine"
-              className="flex flex-wrap items-center gap-2"
+          )}
+          <nav
+            aria-label="Changer de semaine"
+            className={styles.weekNavigation}
+          >
+            <a
+              aria-label="Semaine précédente"
+              className={styles.arrowButton}
+              href={adjacentWeekHref(site.id, range, -1)}
+              title="Semaine précédente"
             >
-              <a
-                className="secondary-button"
-                href={adjacentWeekHref(site.id, range, -1)}
-              >
-                ← Semaine précédente
-              </a>
-              <a className="secondary-button" href={weekHref(site.id, today)}>
-                Aujourd’hui
-              </a>
-              <a
-                className="secondary-button"
-                href={adjacentWeekHref(site.id, range, 1)}
-              >
-                Semaine suivante →
-              </a>
-            </nav>
-            <form
-              action="/tools/planning"
-              className="flex flex-wrap items-end gap-2"
-              method="get"
+              ←
+            </a>
+            <div className={styles.weekLabel}>
+              <span>Semaine</span>
+              <strong>{rangeLabel(range)}</strong>
+            </div>
+            <a
+              aria-label="Semaine suivante"
+              className={styles.arrowButton}
+              href={adjacentWeekHref(site.id, range, 1)}
+              title="Semaine suivante"
             >
-              <input name="site" type="hidden" value={site.id} />
-              <label
-                className="grid gap-1 text-sm font-medium"
-                htmlFor="week-date"
-              >
-                Aller à une date
-                <input
-                  className="border border-zinc-300 bg-white px-3 py-2 text-zinc-950"
-                  defaultValue={range.startsOn}
-                  id="week-date"
-                  name="date"
-                  type="date"
-                />
-              </label>
-              <button className="secondary-button" type="submit">
-                Afficher cette semaine
-              </button>
-            </form>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <PlanningExportButton
-              draftVersionNumber={draftVersion?.version_number}
-              siteName={site.name}
-              weekStart={range.startsOn}
-            />
-            {activeVersionId ? (
-              <a
-                className="secondary-button"
-                download
-                href={`/tools/planning/export/${activeVersionId}`}
-              >
+              →
+            </a>
+            <a className={styles.todayButton} href={weekHref(site.id, today)}>
+              Aujourd’hui
+            </a>
+          </nav>
+        </div>
+
+        <div className={styles.toolbarActions}>
+          <div className={styles.versionStatus}>
+            <p>
+              <strong>
                 {draftVersion
-                  ? 'Exporter le brouillon en Excel'
-                  : 'Exporter en Excel'}
-              </a>
-            ) : null}
-            {draftVersion && publishedVersion ? (
-              <a
-                className="secondary-button"
-                download
-                href={`/tools/planning/export/${publishedVersion.id}`}
-              >
-                Exporter la version publiée en Excel
-              </a>
-            ) : null}
+                  ? `Copie de travail v${draftVersion.version_number}`
+                  : publishedVersion
+                    ? `Version publiée v${publishedVersion.version_number}`
+                    : 'Aucune version'}
+              </strong>
+              <span>
+                {publishedVersion
+                  ? `Référence publiée ${publicationLabel(
+                      publishedVersion.published_at,
+                      site.timezone,
+                    )}`
+                  : 'Aucune publication pour cette période'}
+              </span>
+            </p>
           </div>
+
+          {draftVersion ? (
+            <details
+              className={`${styles.menu} ${styles.publishMenu}`}
+              name="planning-toolbar-menu"
+            >
+              <summary>
+                {publishedVersion ? 'Publier' : 'Première publication'}
+              </summary>
+              <div className={styles.publishPanel}>
+                <p className={styles.panelTitle}>
+                  {publishedVersion
+                    ? 'Publier les modifications'
+                    : 'Publier cette semaine'}
+                </p>
+                <p className={styles.panelHelp}>
+                  Le motif assure la traçabilité, notamment pour les changements
+                  de dernière minute.
+                </p>
+                <form action={publishSchedule} className={styles.publishForm}>
+                  <input
+                    name="organizationId"
+                    type="hidden"
+                    value={site.organization_id}
+                  />
+                  <input name="siteId" type="hidden" value={site.id} />
+                  <input
+                    name="scheduleId"
+                    type="hidden"
+                    value={draftVersion.id}
+                  />
+                  <input
+                    name="weekStart"
+                    type="hidden"
+                    value={range.startsOn}
+                  />
+                  <label htmlFor="publication-reason">
+                    Motif de publication
+                  </label>
+                  <input
+                    className="field-input"
+                    id="publication-reason"
+                    minLength={3}
+                    name="reason"
+                    placeholder={
+                      publishedVersion
+                        ? 'Ex. remplacement urgent du 24 juillet'
+                        : 'Ex. validation du planning initial'
+                    }
+                    required
+                  />
+                  <button className="primary-button" type="submit">
+                    {publishedVersion
+                      ? 'Publier les modifications'
+                      : 'Confirmer la publication'}
+                  </button>
+                </form>
+              </div>
+            </details>
+          ) : null}
+
+          <details className={styles.menu} name="planning-toolbar-menu">
+            <summary>Date et exports</summary>
+            <div className={styles.optionsPanel}>
+              <form
+                action="/tools/planning"
+                className={styles.dateForm}
+                method="get"
+              >
+                <input name="site" type="hidden" value={site.id} />
+                <label htmlFor="week-date">Aller à une date</label>
+                <div>
+                  <input
+                    defaultValue={range.startsOn}
+                    id="week-date"
+                    name="date"
+                    type="date"
+                  />
+                  <button className="secondary-button" type="submit">
+                    Afficher
+                  </button>
+                </div>
+              </form>
+
+              <div className={styles.exportGroup}>
+                <p className={styles.panelTitle}>Exporter</p>
+                <div className={styles.exportActions}>
+                  <PlanningExportButton
+                    draftVersionNumber={draftVersion?.version_number}
+                    siteName={site.name}
+                    weekStart={range.startsOn}
+                  />
+                  {activeVersionId ? (
+                    <a
+                      className="secondary-button"
+                      download
+                      href={`/tools/planning/export/${activeVersionId}`}
+                    >
+                      {draftVersion
+                        ? 'Exporter le brouillon en Excel'
+                        : 'Exporter en Excel'}
+                    </a>
+                  ) : null}
+                  {draftVersion && publishedVersion ? (
+                    <a
+                      className="secondary-button"
+                      download
+                      href={`/tools/planning/export/${publishedVersion.id}`}
+                    >
+                      Exporter la version publiée en Excel
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
       </section>
       {params.saved === 'published' ? (
         <p
           className="border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900"
+          data-print-hide
           role="status"
         >
           La semaine a été publiée. Un nouveau brouillon modifiable reste
@@ -301,6 +386,7 @@ export default async function PlanningPage({
       {params.error ? (
         <p
           className="border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+          data-print-hide
           role="alert"
         >
           L’action n’a pas pu être terminée. Vérifiez le motif et les règles du
@@ -311,80 +397,6 @@ export default async function PlanningPage({
         <p className="text-sm text-amber-700" data-print-hide role="alert">
           Certaines données n’ont pas pu être chargées.
         </p>
-      ) : null}
-
-      {draftVersion ? (
-        <aside
-          className="border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-          data-print-hide
-        >
-          <p className="font-semibold">
-            {publishedVersion
-              ? `Brouillon de modifications — version ${draftVersion.version_number}`
-              : `Brouillon initial — version ${draftVersion.version_number}`}
-          </p>
-          <p className="mt-1 leading-6">
-            {publishedVersion ? (
-              <>
-                La version {publishedVersion.version_number}, publiée{' '}
-                {publicationLabel(publishedVersion.published_at, site.timezone)}
-                , reste la référence. Toute modification, y compris de dernière
-                minute, doit être republiée avec un motif.
-              </>
-            ) : (
-              <>
-                Aucun planning n’est encore publié pour cette période. Les
-                exports portent explicitement la mention brouillon.
-              </>
-            )}
-          </p>
-        </aside>
-      ) : null}
-
-      {draftVersion ? (
-        <details
-          className="border border-zinc-300 bg-white p-4"
-          data-print-hide
-        >
-          <summary className="cursor-pointer text-sm font-semibold">
-            {publishedVersion
-              ? 'Publier les modifications'
-              : 'Publier cette semaine'}
-          </summary>
-          <p className="mt-3 text-sm leading-6 text-zinc-600">
-            Le motif est conservé avec la version pour assurer la traçabilité
-            des changements.
-          </p>
-          <form
-            action={publishSchedule}
-            className="mt-3 flex flex-col gap-2 sm:flex-row"
-          >
-            <input
-              name="organizationId"
-              type="hidden"
-              value={site.organization_id}
-            />
-            <input name="siteId" type="hidden" value={site.id} />
-            <input name="scheduleId" type="hidden" value={draftVersion.id} />
-            <input name="weekStart" type="hidden" value={range.startsOn} />
-            <input
-              className="field-input flex-1"
-              minLength={3}
-              name="reason"
-              placeholder={
-                publishedVersion
-                  ? 'Motif des modifications'
-                  : 'Motif de publication'
-              }
-              required
-            />
-            <button className="primary-button" type="submit">
-              {publishedVersion
-                ? 'Publier les modifications'
-                : 'Confirmer la publication'}
-            </button>
-          </form>
-        </details>
       ) : null}
 
       <PlanningGrid
