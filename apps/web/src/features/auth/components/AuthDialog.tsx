@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
 import { Modal } from "../../../components/ds/Modal";
@@ -37,7 +36,6 @@ const switchCopyByMode = {
 >;
 
 export function AuthDialog({ mode, onClose, onModeChange }: AuthDialogProps) {
-  const router = useRouter();
   const { clearSession, saveSession, session } = useStoredAuthSession();
   const switchCopy = switchCopyByMode[mode];
 
@@ -53,10 +51,9 @@ export function AuthDialog({ mode, onClose, onModeChange }: AuthDialogProps) {
       const { role } = user;
       if (role === "EMPLOYEE" || role === "ADMIN") {
         onClose();
-        router.push("/salarie");
       }
     },
-    [mode, onClose, router, saveSession]
+    [mode, onClose, saveSession]
   );
 
   return (

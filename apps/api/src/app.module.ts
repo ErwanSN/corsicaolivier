@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 
 import { AuthModule } from "./auth/auth.module";
+import { BookingsModule } from "./bookings/bookings.module";
 import { ControlsModule } from "./controls/controls.module";
 import { DatabaseModule } from "./database/database.module";
 import { DossiersModule } from "./dossiers/dossiers.module";
@@ -16,6 +17,7 @@ import { PortMapModule } from "./port-map/port-map.module";
       isGlobal: true
     }),
     DatabaseModule,
+    BookingsModule,
     ControlsModule,
     DossiersModule,
     AuthModule,

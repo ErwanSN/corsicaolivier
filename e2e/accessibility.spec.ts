@@ -4,6 +4,10 @@ import { expect, test } from "@playwright/test";
 for (const pageDefinition of [
   { path: "/", title: /Corsica Linea/i },
   { path: "/compte", title: /Compte \| Corsica Linea/i },
+  {
+    path: "/reservation?route=mrs-aja&depart=2099-01-01&retour=2099-01-02",
+    title: /Réservation \| Corsica Linea/i
+  },
   { path: "/port", title: /Se repérer au port/i },
   { path: "/port/admin", title: /Administration du port/i }
 ] as const) {

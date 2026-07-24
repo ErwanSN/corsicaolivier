@@ -3,65 +3,89 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
+
+concurrency:
+  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}
 
 permissions:
   contents: read
 
 jobs:
   quality:
+    name: Format, lint and types
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.2
+  tests:
+    name: Unit and contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          cache: pnpm
-          node-version-file: .node-version
+  security:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level moderate
 
-      - name: Install
-        run: pnpm install --frozen-lockfile
+  build-and-recovery:
+    name: Build and database recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup
+      - run: pnpm db:recovery-test
+      - run: pnpm build
 
-      - name: Dependency audit
-        run: pnpm audit --prod --audit-level moderate
-
-      - name: Format
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test
-        run: pnpm test
-
-      - name: Setup local database
-        run: pnpm db:setup
-
-      - name: Verify database recovery
-        run: pnpm db:recovery-test
-
-      - name: Build
-        run: pnpm build
-
-      - name: Install browser
-        run: pnpm exec playwright install --with-deps chromium firefox
-
-      - name: Browser and accessibility tests
-        run: pnpm e2e
-
-      - name: Upload browser diagnostics
-        if: ${{ !cancelled() }}
+  e2e:
+    name: Browser, accessibility and API journeys
+    needs: [build-and-recovery, quality, tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup
+      - run: pnpm --filter @corsica/api build && pnpm --filter @corsica/web build
+      - run: pnpm exec playwright install --with-deps chromium firefox
+      - run: pnpm e2e
+      - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           if-no-files-found: ignore
@@ -70,3 +94,42 @@ jobs:
             playwright-report/
             test-results/playwright/
           retention-days: 7
+
+  load-smoke:
+    name: Bounded API load smoke
+    needs: [build-and-recovery, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.33.2 }
+      - uses: actions/setup-node@v5
+        with: { cache: pnpm, node-version-file: .node-version }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup && pnpm --filter @corsica/api build
+      - name: Start API
+        run: pnpm --filter @corsica/api start > api-load.log 2>&1 &
+      - name: Wait for health
+        run: |
+          for attempt in {1..60}; do
+            curl --fail --silent http://localhost:3001/api/health && exit 0
+            sleep 1
+          done
+          cat api-load.log
+          exit 1
+      - name: Run load budgets
+        env:
+          LOAD_CONCURRENCY: 5
+          LOAD_DURATION_SECONDS: 15
+          LOAD_P95_BUDGET_MS: 500
+          LOAD_REPORT_PATH: load-report.json
+        run: pnpm load:test
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-smoke-report
+          path: |
+            load-report.json
+            api-load.log
+          retention-days: 14

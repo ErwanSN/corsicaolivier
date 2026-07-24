@@ -14,7 +14,7 @@ test.beforeAll(async ({ request }) => {
 
 test("un visiteur est renvoyé vers la connexion", async ({ page }) => {
   await page.goto("/salarie/rechercher");
-  await expect(page).toHaveURL(/\/compte$/);
+  await expect(page).toHaveURL(/\/salarie\/connexion$/);
 });
 
 test("les dossiers refusent les visiteurs et les comptes clients", async ({ request }) => {
@@ -68,7 +68,7 @@ async function ensureAccount(request: APIRequestContext, email: string): Promise
 }
 
 async function login(page: Page, email: string): Promise<void> {
-  await page.goto("/compte");
+  await page.goto("/salarie/connexion");
   await page.getByLabel("Email ou nom d'utilisateur").fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();

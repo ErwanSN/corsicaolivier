@@ -4,12 +4,12 @@ import { webBrandImages } from "../../assets/brand-images";
 
 export function Logo() {
   return (
-    <Link className="flex shrink-0 items-center gap-2 rounded-lg focus-ring" href="/">
-      <span className="text-[20px] leading-none font-extrabold tracking-tight">
+    <Link className="flex shrink-0 items-center gap-2.5 rounded-sm focus-ring" href="/">
+      <span className="text-[19px] leading-none font-extrabold tracking-tight sm:text-[22px]">
         <span className="text-brand">CORSICA</span>{" "}
         <span className="font-semibold text-foreground/80">linea</span>
       </span>
-      <span className="grid size-9 place-items-center rounded-full bg-brand">
+      <span className="grid size-10 place-items-center rounded-full bg-brand sm:size-11">
         <img
           alt="Corsica Linea"
           className="size-6 object-contain"

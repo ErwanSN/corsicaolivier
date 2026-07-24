@@ -42,6 +42,26 @@
     min-height: 100svh;
   }
 
+  html {
+    overflow-x: clip;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+  }
+
+  /* Radix Select verrouille le document lors de l'ouverture. Ce changement
+     d'overflow casse le contexte des barres sticky ; les listes sont des
+     surfaces non modales et ne doivent donc pas bloquer le scroll de page. */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+
+  img,
+  svg {
+    max-width: 100%;
+  }
+
   button {
     cursor: pointer;
   }

@@ -15,6 +15,20 @@ export function isWebRefreshEligible(path: string): boolean {
   return !webRefreshExcludedPaths.has(path);
 }
 
+export function shouldRefreshWebSession(
+  response: Response,
+  path: string,
+  requestInit: RequestInit,
+  canRefreshWebSession: boolean
+): boolean {
+  return (
+    response.status === 401 &&
+    canRefreshWebSession &&
+    !new Headers(requestInit.headers).has("Authorization") &&
+    isWebRefreshEligible(path)
+  );
+}
+
 function randomNonZeroHex(bytes: number): string {
   let value = "";
   while (!value || /^0+$/.test(value)) value = randomHex(bytes);

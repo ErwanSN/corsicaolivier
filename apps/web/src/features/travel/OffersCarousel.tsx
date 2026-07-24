@@ -24,7 +24,7 @@ function OfferCard({
     <article
       aria-label={`${String(index + 1)} sur ${String(total)}`}
       aria-roledescription="slide"
-      className="flex h-auto shrink-0 basis-[88%] snap-start flex-col overflow-hidden rounded-lg border border-border bg-surface sm:basis-[calc((100%-1rem)/2)] lg:basis-[calc((100%-2rem)/3)]"
+      className="flex h-auto shrink-0 basis-[92%] snap-start flex-col overflow-hidden rounded-xl border border-border bg-surface min-[380px]:basis-[88%] sm:basis-[calc((100%-1rem)/2)] lg:basis-[calc((100%-2rem)/3)]"
       role="group"
     >
       <div className="relative aspect-[49/38] overflow-hidden bg-border">
@@ -189,9 +189,9 @@ export function OffersCarousel() {
   return (
     <section
       aria-labelledby="offers-heading"
-      className="scroll-mt-20 border-t border-border bg-[#f6f6f6] pt-14 pb-28 sm:py-16 md:py-20"
+      className="scroll-mt-20 border-t border-border bg-[#f6f6f6] py-12 sm:py-16 md:py-20"
     >
-      <div className="mx-auto w-full max-w-7xl px-4 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <OffersHeader
           canScrollNext={carouselState.canScrollNext}
           canScrollPrevious={carouselState.canScrollPrevious}

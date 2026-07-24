@@ -7,7 +7,7 @@ export function PracticalSection() {
   return (
     <section
       aria-labelledby="practical-heading"
-      className="scroll-mt-20 bg-[#f6f6f6] py-16 md:py-20"
+      className="scroll-mt-20 bg-[#f6f6f6] py-12 sm:py-16 md:py-20"
     >
       <div className="mx-auto w-full max-w-7xl px-4 lg:px-8">
         <h2
@@ -17,7 +17,7 @@ export function PracticalSection() {
           Pratique
         </h2>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="mt-7 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2 sm:mt-8 sm:gap-4 lg:grid-cols-4">
           {practicalLinks.map((item) => (
             <a
               className="focus-ring group overflow-hidden rounded-lg border border-border bg-surface transition hover:border-foreground/25"
@@ -31,7 +31,7 @@ export function PracticalSection() {
                   alt=""
                   className="object-cover transition duration-300 ease-out group-hover:scale-[1.025]"
                   fill
-                  sizes="(min-width: 1024px) 22vw, 46vw"
+                  sizes="(min-width: 1024px) 22vw, (min-width: 380px) 46vw, 100vw"
                   src={item.image}
                 />
               </div>

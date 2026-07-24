@@ -62,6 +62,35 @@ model PortMapConfiguration {
   @@map("port_map_configurations")
 }
 
+model BookingDraft {
+  id             String              @id @default(uuid())
+  payload        String
+  quote          String
+  version        Int                 @default(1)
+  idempotencyKey String              @unique @map("idempotency_key")
+  requestHash    String              @map("request_hash")
+  expiresAt      DateTime            @map("expires_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  auditEvents    BookingAuditEvent[]
+
+  @@index([expiresAt])
+  @@map("booking_drafts")
+}
+
+model BookingAuditEvent {
+  id        String       @id @default(uuid())
+  bookingId String       @map("booking_id")
+  eventType String       @map("event_type")
+  version   Int
+  metadata  String
+  createdAt DateTime     @default(now()) @map("created_at")
+  booking   BookingDraft @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@map("booking_audit_events")
+}
+
 model Dossier {
   id            String     @id @default(uuid())
   reference     String     @unique

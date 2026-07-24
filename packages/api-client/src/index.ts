@@ -2,16 +2,18 @@ import {
   apiErrorSchema,
   authSessionSchema,
   authUserSchema,
+  bookingDraftSchema,
   controlRecordListSchema,
   controlRecordSchema,
   dossierListSchema,
   dossierSchema,
   passwordChangeRequestSchema,
   portMapConfigSchema,
-  type ApiErrorDto,
   type AuthCredentialsDto,
   type AuthSessionDto,
   type AuthUserDto,
+  type BookingDraft,
+  type BookingDraftInput,
   type ChangePasswordDto,
   type ControlRecord,
   type CreateControlRecord,
@@ -20,26 +22,16 @@ import {
   type LoginCredentialsDto,
   type PasswordChangeRequestDto,
   type PortMapConfig,
-  type UpdateProfileDto
+  type UpdateProfileDto,
+  type UpdateBookingDraft
 } from "@corsica/contracts";
 
-import { createTraceparent, isWebRefreshEligible } from "./request-policy";
+import { ApiClientError } from "./api-client-error";
+import { createTraceparent, shouldRefreshWebSession } from "./request-policy";
+
+export { ApiClientError, getApiClientErrorMessage } from "./api-client-error";
 
 const unknownRequestId = "00000000-0000-4000-8000-000000000000";
-
-function shouldRefreshWebSession(
-  response: Response,
-  path: string,
-  requestInit: RequestInit,
-  canRefreshWebSession: boolean
-): boolean {
-  return (
-    response.status === 401 &&
-    canRefreshWebSession &&
-    !new Headers(requestInit.headers).has("Authorization") &&
-    isWebRefreshEligible(path)
-  );
-}
 
 type Fetcher = typeof fetch;
 
@@ -48,20 +40,6 @@ export type CorsicaApiClientOptions = Readonly<{
   fetcher?: Fetcher;
   requestTimeoutMilliseconds?: number;
 }>;
-
-export class ApiClientError extends Error {
-  readonly code: string;
-  readonly requestId: string;
-  readonly status: number;
-
-  constructor(status: number, error: ApiErrorDto) {
-    super(error.message);
-    this.code = error.code;
-    this.name = "ApiClientError";
-    this.requestId = error.requestId;
-    this.status = status;
-  }
-}
 
 export class CorsicaApiClient {
   private readonly baseUrl: string;
@@ -162,6 +140,30 @@ export class CorsicaApiClient {
     });
   }
 
+  createBookingDraft(draft: BookingDraftInput): Promise<BookingDraft> {
+    return this.request("/api/v1/booking-drafts", {
+      body: draft,
+      headers: { "Idempotency-Key": `booking-${createTraceparent().slice(3, 35)}` },
+      method: "POST",
+      schema: bookingDraftSchema
+    });
+  }
+
+  getBookingDraft(id: string): Promise<BookingDraft> {
+    return this.request(`/api/v1/booking-drafts/${encodeURIComponent(id)}`, {
+      method: "GET",
+      schema: bookingDraftSchema
+    });
+  }
+
+  updateBookingDraft(id: string, update: UpdateBookingDraft): Promise<BookingDraft> {
+    return this.request(`/api/v1/booking-drafts/${encodeURIComponent(id)}`, {
+      body: update,
+      method: "PATCH",
+      schema: bookingDraftSchema
+    });
+  }
+
   searchDossiers(accessToken: string | undefined, search: DossierSearchQuery): Promise<Dossier[]> {
     const parameters = new URLSearchParams({ field: search.field, query: search.query });
     return this.request(`/api/v1/dossiers/search?${parameters.toString()}`, {
@@ -243,11 +245,12 @@ export class CorsicaApiClient {
     options: Readonly<{
       accessToken?: string | undefined;
       body?: unknown;
+      headers?: Readonly<Record<string, string>>;
       method: "GET" | "PATCH" | "POST" | "PUT";
       schema: { parse: (value: unknown) => Response };
     }>
   ): Promise<Response> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...options.headers };
     const requestInit: RequestInit = {
       credentials: "include",
       headers,
@@ -325,12 +328,4 @@ export class CorsicaApiClient {
       if (this.webRefreshPromise === refreshPromise) this.webRefreshPromise = null;
     }
   }
-}
-
-export function getApiClientErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return error.message;
-  }
-
-  return "Impossible de contacter le serveur local.";
 }

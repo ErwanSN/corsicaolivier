@@ -61,7 +61,7 @@ test.afterAll(async ({ request }) => {
 });
 
 test("un administrateur déplace un point, recalcule et persiste l’itinéraire", async ({ page }) => {
-  await page.goto("/compte");
+  await page.goto("/salarie/connexion");
   await page.getByLabel("Email ou nom d'utilisateur").fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
@@ -136,7 +136,7 @@ async function ensureAdminAccount(request: APIRequestContext): Promise<void> {
 }
 
 async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto("/compte");
+  await page.goto("/salarie/connexion");
   await page.getByLabel("Email ou nom d'utilisateur").fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();

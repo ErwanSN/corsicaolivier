@@ -3,7 +3,7 @@ import { DestinationsCarousel } from "../../features/travel/DestinationsCarousel
 import { Hero } from "../../features/travel/Hero";
 import { OffersCarousel } from "../../features/travel/OffersCarousel";
 import { PracticalSection } from "../../features/travel/PracticalSection";
-import { TestimonialsCarousel } from "../../features/travel/TestimonialsCarousel";
+import { TestimonialsSection } from "../../features/travel/TestimonialsSection";
 
 export default function Page() {
   return (
@@ -12,7 +12,7 @@ export default function Page() {
       <OffersCarousel />
       <DestinationsCarousel />
       <PracticalSection />
-      <TestimonialsCarousel />
+      <TestimonialsSection />
       <CompanyIntro />
     </>
   );

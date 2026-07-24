@@ -88,7 +88,14 @@ async function bootstrap(): Promise<void> {
   });
   await app.register(helmet);
   await app.register(cors, {
-    allowedHeaders: ["Authorization", "Content-Type", "Traceparent", "Tracestate", "X-Request-Id"],
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "Idempotency-Key",
+      "Traceparent",
+      "Tracestate",
+      "X-Request-Id"
+    ],
     credentials: true,
     exposedHeaders: ["X-Request-Id", "X-Trace-Id"],
     maxAge: 600,

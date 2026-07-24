@@ -33,15 +33,22 @@ export function Modal({ bodyClassName, children, onClose, size = "medium", title
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${String(scrollbarWidth)}px`;
 
     if (!dialog.open) {
       dialog.showModal();
     }
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
 
       if (dialog.open) {
         dialog.close();
@@ -58,13 +65,13 @@ export function Modal({ bodyClassName, children, onClose, size = "medium", title
     <dialog
       aria-labelledby={titleId}
       className={cn(
-        "m-auto max-h-[calc(100svh-24px-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-0 text-foreground shadow-[0_24px_72px_rgba(0,0,0,0.24)] [overscroll-behavior:contain] backdrop:bg-overlay max-sm:w-[calc(100vw-24px)]",
+        "fixed inset-0 m-auto max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] max-w-none min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-0 text-foreground shadow-[0_24px_72px_rgba(0,0,0,0.24)] [overscroll-behavior:contain] backdrop:bg-overlay max-sm:w-[calc(100vw_-_1.5rem)]",
         modalSizeClassNames[size]
       )}
       onCancel={handleCancel}
       ref={dialogRef}
     >
-      <div className="flex max-h-[inherit] min-h-0 flex-col">
+      <div className="flex max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] min-h-0 flex-col">
         <header className="grid h-14 shrink-0 grid-cols-[1fr_40px] items-center border-b border-border px-4">
           <h2 className="truncate text-[16px] font-semibold leading-6" id={titleId}>
             {title}
@@ -80,7 +87,12 @@ export function Modal({ bodyClassName, children, onClose, size = "medium", title
           </Button>
         </header>
 
-        <div className={cn("min-h-0 overflow-y-auto p-6 max-sm:p-5", bodyClassName)}>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-6 max-sm:p-5",
+            bodyClassName
+          )}
+        >
           {children}
         </div>
       </div>

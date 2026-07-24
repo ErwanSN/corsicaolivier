@@ -30,23 +30,17 @@ export function RoleRedirect() {
   return null;
 }
 
-function getRoleRedirect(
+export function getRoleRedirect(
   pathname: string,
   status: "anonymous" | "authenticated" | "loading",
   session: WebAuthSession | null
 ): Route | null {
   if (status === "loading") return null;
-  if (!session) return isPathWithin(pathname, "/salarie") ? "/compte" : null;
-  return isStaffRole(session.user.role)
-    ? getStaffRedirect(pathname)
-    : isPathWithin(pathname, "/salarie")
-      ? "/"
-      : null;
-}
-
-function getStaffRedirect(pathname: string): Route | null {
-  if (isPathWithin(pathname, "/salarie") || isPathWithin(pathname, "/port")) return null;
-  return "/salarie/rechercher";
+  // Le site public reste le parcours par défaut, même pour un compte interne.
+  if (!isPathWithin(pathname, "/salarie") || pathname === "/salarie/connexion") return null;
+  if (!session) return "/salarie/connexion";
+  if (isStaffRole(session.user.role)) return null;
+  return "/compte";
 }
 
 function isPathWithin(pathname: string, root: string): boolean {

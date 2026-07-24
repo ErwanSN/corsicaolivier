@@ -110,6 +110,75 @@ export const createControlRecordSchema = z.object({
   status: controlStatusSchema
 });
 
+export const bookingLegSchema = z.enum(["outbound", "return"]);
+export const bookingAccommodationSchema = z.enum(["unassigned", "seat", "cabin2", "cabin4"]);
+export const bookingFareSchema = z.enum(["standard", "flex", "superFlex"]);
+export const bookingInsuranceSchema = z.enum(["none", "multirisk", "serenity"]);
+export const bookingVehicleTypeSchema = z.enum(["none", "car", "motorcycle", "van", "camper"]);
+export const bookingLegSelectionSchema = z.object({
+  accommodation: bookingAccommodationSchema,
+  breakfast: z.number().int().min(0).max(9),
+  fare: bookingFareSchema,
+  kennel: z.boolean(),
+  meal: z.number().int().min(0).max(9),
+  priorityDisembarkation: z.boolean()
+});
+export const bookingDraftInputSchema = z.object({
+  babies: z.number().int().min(0).max(9),
+  children: z.number().int().min(0).max(9),
+  contact: z.object({
+    email: z.union([z.literal(""), z.email().max(254)]),
+    firstName: z.string().trim().max(100),
+    lastName: z.string().trim().max(100),
+    phone: z.string().trim().max(30)
+  }),
+  insurance: bookingInsuranceSchema,
+  itinerary: z.object({
+    depart: z.iso.date(),
+    retour: z.iso.date().optional(),
+    route: z.string().trim().min(1).max(50)
+  }),
+  legs: z.object({ outbound: bookingLegSelectionSchema, return: bookingLegSelectionSchema }),
+  passengers: z.number().int().min(1).max(9),
+  seniors: z.number().int().min(0).max(9),
+  vehicle: z.object({
+    height: z.number().min(0.5).max(5),
+    length: z.number().min(0.5).max(20),
+    make: z.string().trim().max(100),
+    model: z.string().trim().max(100),
+    loadedHeight: z.boolean().default(false),
+    rearDepth: z.number().min(0).max(20).default(0),
+    rearEquipment: z.enum(["bikeRack", "none", "trailer"]).default("none"),
+    sameForReturn: z.boolean(),
+    trailer: z.boolean(),
+    type: bookingVehicleTypeSchema
+  })
+});
+export const bookingQuoteSchema = z.object({
+  bookingFee: z.number().nonnegative(),
+  carbon: z.number().nonnegative(),
+  currency: z.literal("EUR"),
+  expiresAt: z.string(),
+  insurance: z.number().nonnegative(),
+  legs: z.object({ outbound: z.number().nonnegative(), return: z.number().nonnegative() }),
+  options: z.number().nonnegative(),
+  taxes: z.number().nonnegative(),
+  total: z.number().nonnegative()
+});
+export const bookingDraftSchema = z.object({
+  createdAt: z.string(),
+  draft: bookingDraftInputSchema,
+  expiresAt: z.string(),
+  id: z.uuid(),
+  quote: bookingQuoteSchema,
+  updatedAt: z.string(),
+  version: z.number().int().positive()
+});
+export const updateBookingDraftSchema = z.object({
+  draft: bookingDraftInputSchema,
+  expectedVersion: z.number().int().positive()
+});
+
 export const portPointTypeSchema = z.enum(["boarding", "control", "ship", "storage"]);
 export const coordinatesSchema = z.tuple([
   z.number().min(-90).max(90),
@@ -168,6 +237,10 @@ export type DossierSearchQuery = z.infer<typeof dossierSearchQuerySchema>;
 export type ControlRecord = z.infer<typeof controlRecordSchema>;
 export type ControlStatus = z.infer<typeof controlStatusSchema>;
 export type CreateControlRecord = z.infer<typeof createControlRecordSchema>;
+export type BookingDraft = z.infer<typeof bookingDraftSchema>;
+export type BookingDraftInput = z.infer<typeof bookingDraftInputSchema>;
+export type BookingQuote = z.infer<typeof bookingQuoteSchema>;
+export type UpdateBookingDraft = z.infer<typeof updateBookingDraftSchema>;
 export type TravelerStatus = z.infer<typeof travelerStatusSchema>;
 export type AuthCredentialsDto = z.infer<typeof authCredentialsSchema>;
 export type AuthSessionDto = z.infer<typeof authSessionSchema>;

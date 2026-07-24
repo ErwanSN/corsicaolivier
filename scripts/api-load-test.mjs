@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import { writeFile } from "node:fs/promises";
 
 const targetUrl = process.env.LOAD_TARGET_URL ?? "http://localhost:3001/api/health";
 const durationSeconds = readPositiveNumber("LOAD_DURATION_SECONDS", 60);
@@ -26,7 +27,11 @@ const report = {
   requestsPerSecond: requests / durationSeconds,
   targetUrl
 };
-console.log(JSON.stringify(report, null, 2));
+const serializedReport = `${JSON.stringify(report, null, 2)}\n`;
+console.log(serializedReport);
+if (process.env.LOAD_REPORT_PATH) {
+  await writeFile(process.env.LOAD_REPORT_PATH, serializedReport, "utf8");
+}
 
 if (report.errorRate > maximumErrorRate || report.p95Milliseconds > p95BudgetMilliseconds) {
   console.error(

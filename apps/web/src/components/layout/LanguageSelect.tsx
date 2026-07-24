@@ -26,8 +26,16 @@ export function LanguageSelect() {
         }
       }))}
       trigger={
-        <Button aria-label={`Langue : ${current}`} size="icon" variant="outline">
+        <Button
+          aria-label={`Langue : ${current}`}
+          className="size-auto border-0 bg-transparent px-1"
+          size="icon"
+          variant="ghost"
+        >
           <span className="text-[12px] font-bold">{current}</span>
+          <span aria-hidden="true" className="text-[10px]">
+            ⌄
+          </span>
         </Button>
       }
     />

@@ -1,5 +1,5 @@
 export const floatingSurfaceClassName = [
-  "z-50 overflow-hidden rounded-lg border border-border bg-surface text-foreground",
+  "z-[80] overflow-hidden rounded-lg border border-border bg-surface text-foreground",
   "shadow-[0_18px_52px_rgba(0,0,0,0.18)]"
 ].join(" ");
 

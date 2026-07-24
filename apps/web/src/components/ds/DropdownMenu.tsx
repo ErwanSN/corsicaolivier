@@ -24,7 +24,7 @@ export type DropdownMenuProps = Readonly<{
 
 export function DropdownMenu({ align = "end", ariaLabel, items, trigger }: DropdownMenuProps) {
   return (
-    <RadixDropdownMenu.Root>
+    <RadixDropdownMenu.Root modal={false}>
       <RadixDropdownMenu.Trigger aria-label={ariaLabel} asChild>
         {trigger}
       </RadixDropdownMenu.Trigger>

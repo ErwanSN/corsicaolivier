@@ -19,6 +19,20 @@ const httpRequestDuration = new Histogram({
   registers: [metricsRegistry]
 });
 
+export type BookingEvent =
+  "conflict" | "created" | "expired" | "not_found" | "replayed" | "updated";
+
+const bookingEvents = new Counter({
+  help: "Total number of booking draft lifecycle events.",
+  labelNames: ["event"] as const,
+  name: "corsica_api_booking_draft_events_total",
+  registers: [metricsRegistry]
+});
+
+export function recordBookingEvent(event: BookingEvent): void {
+  bookingEvents.inc({ event });
+}
+
 export function recordHttpRequest(
   method: string,
   route: string,
