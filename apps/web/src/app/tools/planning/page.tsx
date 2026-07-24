@@ -20,6 +20,7 @@ import {
   resolveWeeklyRange,
   type WeeklyPlanningRange,
 } from '../../../lib/planning-range';
+import { orderSites } from '../../../lib/sites';
 import { publishSchedule } from './actions';
 
 type PlanningPageProps = Readonly<{
@@ -64,7 +65,7 @@ export default async function PlanningPage({
   const params = await searchParams;
   const today = currentParisDate();
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
 
   if (!site) {

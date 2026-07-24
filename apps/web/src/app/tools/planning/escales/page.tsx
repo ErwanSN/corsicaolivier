@@ -11,6 +11,7 @@ import type {
   Site,
   Vessel,
 } from '../../../../lib/api/types';
+import { orderSites } from '../../../../lib/sites';
 import {
   assignDemandProfile,
   createLoadForecast,
@@ -132,7 +133,7 @@ function TimingReference({
 export default async function EscalesPage({ searchParams }: EscalesPageProps) {
   const params = await searchParams;
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
   const [callsResult, profilesResult, vesselsResult] = site
     ? await Promise.all([

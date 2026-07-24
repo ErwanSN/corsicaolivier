@@ -4,6 +4,7 @@ import { SiteSwitcher } from '../../../../components/site-switcher';
 import { PlatformSelect } from '../../../../components/ui/platform-select';
 import { apiFetch } from '../../../../lib/api/server';
 import type { Agent, Site } from '../../../../lib/api/types';
+import { orderSites } from '../../../../lib/sites';
 import { createAgent, updateAgent } from '../actions';
 
 type AgentsPageProps = Readonly<{
@@ -28,7 +29,7 @@ function visibleEmployeeNumber(agent: Agent): string {
 export default async function AgentsPage({ searchParams }: AgentsPageProps) {
   const params = await searchParams;
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const selectedSite =
     sites.find((site) => site.id === params.site) ?? sites.at(0);
   const agentsResult = selectedSite

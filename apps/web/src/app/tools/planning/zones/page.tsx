@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { apiFetch } from '../../../../lib/api/server';
 import type { Site } from '../../../../lib/api/types';
+import { orderSites } from '../../../../lib/sites';
 import { createZone } from '../actions';
 
 type ZonesPageProps = Readonly<{
@@ -15,7 +16,7 @@ type ZonesPageProps = Readonly<{
 export default async function ZonesPage({ searchParams }: ZonesPageProps) {
   const params = await searchParams;
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const organizationId = sites.at(0)?.organization_id;
 
   return (

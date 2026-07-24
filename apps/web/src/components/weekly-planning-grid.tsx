@@ -501,7 +501,7 @@ export function PlanningGrid({
   return (
     <div className={styles.planningArea}>
       {hasEditableAssignments ? (
-        <div className={styles.dragHint}>
+        <div className={styles.dragHint} data-svg-hide>
           <p>
             Cliquez pour modifier · utilisez « Déplacer » pour changer de case.
           </p>
@@ -519,6 +519,7 @@ export function PlanningGrid({
                 ? styles.moveSuccess
                 : styles.movePending
           }
+          data-svg-hide
           role={moveFeedback.kind === 'error' ? 'alert' : 'status'}
         >
           {moveFeedback.message}
@@ -579,9 +580,9 @@ function WeeklyTable({
   );
 
   return (
-    <section className={styles.weekSheet} aria-label="Planning de la semaine">
-      <div className={styles.weekViewport}>
-        <div className={styles.weekGrid}>
+    <section aria-label="Planning de la semaine" className={styles.weekSheet}>
+      <div className={styles.weekViewport} data-planning-week-viewport>
+        <div className={styles.weekGrid} data-planning-week-row>
           <div className={styles.cornerHeader}>
             <span>Centre Autos</span>
             <strong>{siteName}</strong>
@@ -641,7 +642,7 @@ function WeekMovementRow({
   kind: 'arrival' | 'departure';
 }>) {
   return (
-    <div className={styles.weekGrid}>
+    <div className={styles.weekGrid} data-planning-week-row>
       <div className={styles.stickyRowLabel}>
         {kind === 'arrival' ? 'Arrivées' : 'Départs'}
       </div>
@@ -662,7 +663,7 @@ function WeekSectionRow({
   label,
 }: Readonly<{ days: CalendarDay[]; label: string }>) {
   return (
-    <div className={styles.weekGrid}>
+    <div className={styles.weekGrid} data-planning-week-row>
       <div
         className={`${styles.sectionLabel} ${label === 'Fret' ? styles.freightBand : styles.autoBand}`}
       >
@@ -692,7 +693,7 @@ function WeekPositionRow({
   position: Position;
 }>) {
   return (
-    <div className={styles.weekGrid}>
+    <div className={styles.weekGrid} data-planning-week-row>
       <div className={styles.positionLabel}>{position.name}</div>
       {days.map((day) => {
         const key = cellKey(position.id, day.date);
@@ -711,6 +712,7 @@ function WeekPositionRow({
               <button
                 aria-label={`Ajouter une affectation au poste ${position.name} le ${day.shortNumber}`}
                 className={styles.addAssignment}
+                data-svg-hide
                 onClick={() => interactions.onCreate(position.id, day.date)}
                 title="Ajouter une affectation"
                 type="button"
@@ -743,7 +745,7 @@ function WeekPositionRow({
 
 function EmptyWeekRow({ days }: Readonly<{ days: CalendarDay[] }>) {
   return (
-    <div className={styles.weekGrid}>
+    <div className={styles.weekGrid} data-planning-week-row>
       <div className={styles.positionLabel}>Postes à configurer</div>
       {days.map((day) => (
         <div className={styles.positionCell} key={day.date} />

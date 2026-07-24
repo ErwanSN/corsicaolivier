@@ -92,6 +92,7 @@ export function PlanningDraggableAssignment({
           {...listeners}
           aria-label={`Déplacer l’affectation de ${agentName}`}
           className={styles.dragHandle}
+          data-svg-hide
           disabled={dragDisabled}
           ref={setActivatorNodeRef}
           title="Maintenir puis déplacer"

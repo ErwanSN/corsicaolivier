@@ -10,6 +10,7 @@ import type {
   Position,
   Site,
 } from '../../../../lib/api/types';
+import { orderSites } from '../../../../lib/sites';
 import { createDemandProfile, createDemandProfileLine } from '../actions';
 
 type BesoinsPageProps = Readonly<{
@@ -37,7 +38,7 @@ function minutesLabel(value: number): string {
 export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
   const params = await searchParams;
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
   const [profilesResult, positionsResult] = site
     ? await Promise.all([

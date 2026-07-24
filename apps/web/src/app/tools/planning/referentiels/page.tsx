@@ -10,6 +10,7 @@ import type {
   Skill,
   Vessel,
 } from '../../../../lib/api/types';
+import { orderSites } from '../../../../lib/sites';
 import {
   createPosition,
   createSkill,
@@ -32,7 +33,7 @@ export default async function ReferentielsPage({
 }: ReferentielsPageProps) {
   const params = await searchParams;
   const sitesResult = await apiFetch<Site[]>('/sites');
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
   const [positionsResult, skillsResult, vesselsResult] = site
     ? await Promise.all([

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import type { Site } from '../lib/api/types';
+import { orderSites } from '../lib/sites';
 
 type SiteSwitcherProps = Readonly<{
   path: string;
@@ -14,13 +15,14 @@ export function SiteSwitcher({
   sites,
 }: SiteSwitcherProps) {
   if (sites.length < 2) return null;
+  const orderedSites = orderSites(sites);
 
   return (
     <nav
       aria-label="Choisir la zone de travail"
       className="flex flex-wrap border border-zinc-400 bg-white"
     >
-      {sites.map((site) => (
+      {orderedSites.map((site) => (
         <Link
           aria-current={site.id === selectedSiteId ? 'page' : undefined}
           className={`border-r border-zinc-300 px-4 py-2 text-sm font-semibold last:border-r-0 ${

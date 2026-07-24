@@ -256,6 +256,25 @@ test('la semaine possède un export PDF en format A4 paysage', async () => {
   assert.match(gridStyles, /grid-template-columns: 28mm repeat\(7,/);
 });
 
+test('la semaine peut être téléchargée dans un SVG autonome', async () => {
+  const button = await readFile(
+    'src/components/planning-export-button.tsx',
+    'utf8',
+  );
+  const grid = await readFile(
+    'src/components/weekly-planning-grid.tsx',
+    'utf8',
+  );
+
+  assert.match(button, /Exporter en SVG/);
+  assert.match(button, /XMLSerializer/);
+  assert.match(button, /foreignObject/);
+  assert.match(button, /image\/svg\+xml/);
+  assert.match(button, /data-svg-hide/);
+  assert.match(button, /\.svg/);
+  assert.match(grid, /data-planning-week-row/);
+});
+
 test('le planning utilise la palette native du corpus Excel', async () => {
   const styles = await readFile(
     'src/components/weekly-planning-grid.module.css',

@@ -10,6 +10,7 @@ import type {
   Site,
 } from '../../../../lib/api/types';
 import { currentParisDate } from '../../../../lib/dates';
+import { orderSites } from '../../../../lib/sites';
 import {
   addGroupMember,
   createGroup,
@@ -32,7 +33,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
     apiFetch<Site[]>('/sites'),
     apiFetch<AgentGroup[]>('/groups'),
   ]);
-  const sites = sitesResult.data ?? [];
+  const sites = orderSites(sitesResult.data ?? []);
   const groups = groupsResult.data ?? [];
   const organizationId =
     groups.at(0)?.organization_id ?? sites.at(0)?.organization_id;
