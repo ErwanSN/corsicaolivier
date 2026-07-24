@@ -1,0 +1,131 @@
+@import 'tailwindcss';
+
+@theme {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-radius: 0 !important;
+  }
+
+  html {
+    background-color: var(--color-white);
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    outline-color: var(--color-red-600);
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply text-xs font-semibold tracking-[0.18em] text-red-600 uppercase;
+  }
+
+  .field-label {
+    @apply block text-sm font-medium text-zinc-700;
+  }
+
+  .field-input {
+    @apply h-11 w-full border border-zinc-400 bg-white px-3.5 text-sm text-zinc-950 transition placeholder:text-zinc-400 focus:border-red-600 focus:ring-2 focus:ring-red-100 focus:outline-none;
+  }
+
+  .platform-select {
+    appearance: none;
+    padding-right: 2.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2352525b' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    background-size: 1.125rem;
+  }
+
+  .platform-select:hover:not(:disabled) {
+    border-color: var(--color-zinc-950);
+  }
+
+  .platform-select:disabled {
+    @apply cursor-not-allowed bg-zinc-100 text-zinc-500 opacity-70;
+  }
+
+  .platform-select option {
+    @apply bg-white text-zinc-950;
+  }
+
+  .primary-button {
+    @apply inline-flex h-11 items-center justify-center bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 focus:ring-2 focus:ring-red-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .secondary-button {
+    @apply inline-flex h-11 items-center justify-center border border-zinc-400 bg-white px-5 text-sm font-semibold text-zinc-800 transition hover:border-zinc-950 hover:bg-zinc-50 focus:ring-2 focus:ring-zinc-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+@layer utilities {
+  .rounded,
+  .rounded-full {
+    border-radius: 0;
+  }
+}
+
+.planning-print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    min-height: auto;
+    background: white !important;
+    color: black;
+    print-color-adjust: exact;
+  }
+
+  [data-app-shell-sidebar],
+  [data-app-shell-header],
+  [data-app-shell-mobile-nav],
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  [data-app-shell-content] {
+    padding-left: 0 !important;
+  }
+
+  [data-app-shell-main] {
+    width: 100%;
+    max-width: none;
+    padding: 0 !important;
+  }
+
+  .planning-print-root {
+    gap: 4mm;
+  }
+
+  .planning-print-only {
+    display: block;
+  }
+}

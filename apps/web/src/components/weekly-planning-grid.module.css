@@ -1,0 +1,485 @@
+.planningArea {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dragHint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #d4d4d8;
+  background: #fafafa;
+  color: #3f3f46;
+  font-size: 0.72rem;
+}
+
+.dragHint p {
+  font-weight: 750;
+}
+
+.dragHint span {
+  color: #71717a;
+  text-align: right;
+}
+
+.movePending,
+.moveSuccess,
+.moveError {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.movePending {
+  border-color: #d4d4d8;
+  background: #fafafa;
+  color: #52525b;
+}
+
+.moveSuccess {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.moveError {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.weekSheet {
+  overflow: hidden;
+  border: 1px solid #969696;
+  background: #ffffff;
+  color: #000000;
+}
+
+.weekViewport {
+  overflow: auto;
+  max-height: calc(100svh - 10rem);
+}
+
+.weekGrid {
+  display: grid;
+  grid-template-columns: 12rem repeat(7, minmax(10rem, 1fr));
+  min-width: 82rem;
+}
+
+.cornerHeader,
+.dayColumnHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 4.5rem;
+  padding: 0.75rem;
+  border-right: 1px solid #969696;
+  border-bottom: 1px solid #969696;
+  background: #c0c0c0;
+  color: #000000;
+}
+
+.cornerHeader {
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.cornerHeader span,
+.dayColumnHeader span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cornerHeader strong {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.dayColumnHeader {
+  text-align: center;
+}
+
+.dayColumnHeader strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 1rem;
+}
+
+.weekendHeader {
+  background: #ffff00;
+}
+
+.stickyRowLabel,
+.sectionLabel,
+.positionLabel {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  border-right: 1px solid #969696;
+  border-bottom: 1px solid #969696;
+  background: #c0c0c0;
+}
+
+.stickyRowLabel {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.movementCell {
+  min-height: 5.5rem;
+  padding: 0.45rem;
+  border-right: 1px solid #c0c0c0;
+  border-bottom: 1px solid #969696;
+  background: #ffffff;
+}
+
+.movementList {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.movementEntry {
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+  border-left: 3px solid #969696;
+  background: #ffffff;
+  font-size: 0.68rem;
+}
+
+.movementEntry > p {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.movementEntry strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movementEntry small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #71717a;
+  font-size: 0.6rem;
+}
+
+.changed {
+  border-left-color: #969696;
+  background: #ffff00;
+  color: #000000;
+}
+
+.cancelled {
+  border-left-color: #000000;
+  background: #969696;
+  color: #ffffff;
+}
+
+.sectionLabel,
+.sectionBand {
+  min-height: 2.15rem;
+  border-bottom: 1px solid #969696;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-right-color: #969696;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sectionBand {
+  border-right: 1px solid #969696;
+}
+
+.autoBand {
+  background: #c0c0c0;
+  color: #000000;
+}
+
+.freightBand {
+  background: #969696;
+  color: #ffffff;
+}
+
+.positionLabel {
+  display: flex;
+  min-height: 3.75rem;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  background: #c0c0c0;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.positionCell {
+  position: relative;
+  min-height: 3.75rem;
+  padding: 0.4rem;
+  border-right: 1px solid #c0c0c0;
+  border-bottom: 1px solid #c0c0c0;
+  background: #ffffff;
+}
+
+.addAssignment {
+  width: 100%;
+  min-height: 1.6rem;
+  margin-bottom: 0.3rem;
+  border: 1px dashed #969696;
+  background: #ffffff;
+  color: #52525b;
+  font-family: inherit;
+  font-size: 0.58rem;
+  font-weight: 750;
+  opacity: 0.45;
+}
+
+.positionCell:hover .addAssignment,
+.addAssignment:focus-visible {
+  background: #c0c0c0;
+  color: #000000;
+  opacity: 1;
+  outline: 2px solid #000000;
+  outline-offset: -2px;
+}
+
+.dropTargetActive {
+  z-index: 1;
+  background: #ffff00;
+  box-shadow: inset 0 0 0 2px #969696;
+}
+
+.weekendCell {
+  background: #ffffff;
+}
+
+.assignment {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 0.3rem;
+  border-left: 3px solid #969696;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: #99cc00;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.65rem;
+}
+
+.draggableAssignment {
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.draggableAssignment:focus-within {
+  background: #ffff00;
+  box-shadow: 0 2px 7px rgb(24 24 27 / 14%);
+}
+
+.assignmentEdit {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.08rem;
+  padding: 0.38rem 0.45rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.assignmentEdit:focus-visible,
+.dragHandle:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: -2px;
+}
+
+.dragHandle {
+  min-width: 2.8rem;
+  padding: 0.2rem 0.3rem;
+  border: 0;
+  border-left: 1px solid #969696;
+  background: #c0c0c0;
+  color: #000000;
+  cursor: grab;
+  font-family: inherit;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.draggingAssignment {
+  opacity: 0.45;
+}
+
+.assignment strong,
+.assignment span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assignment strong {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.assignment span {
+  color: #52525b;
+  font-size: 0.6rem;
+}
+
+.coverage,
+.missingCoverage {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px dotted #a1a1aa;
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.coverage {
+  color: #71717a;
+}
+
+.missingCoverage {
+  padding: 0.2rem;
+  border-top-style: solid;
+  background: #ffff00;
+  color: #000000;
+}
+
+.emptyValue {
+  color: #a1a1aa;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 767px) {
+  .dragHint {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dragHint span {
+    text-align: left;
+  }
+
+  .weekViewport {
+    max-height: none;
+  }
+}
+
+@media print {
+  .planningArea {
+    display: block;
+  }
+
+  .dragHint,
+  .addAssignment,
+  .movePending,
+  .moveSuccess,
+  .moveError {
+    display: none;
+  }
+
+  .weekSheet {
+    overflow: visible;
+    border-color: #71717a;
+    break-inside: avoid;
+  }
+
+  .weekViewport {
+    overflow: visible;
+    max-height: none;
+  }
+
+  .weekGrid {
+    grid-template-columns: 28mm repeat(7, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  .cornerHeader,
+  .dayColumnHeader,
+  .stickyRowLabel,
+  .sectionLabel,
+  .positionLabel {
+    position: static;
+  }
+
+  .cornerHeader,
+  .dayColumnHeader {
+    min-height: 12mm;
+    padding: 2mm;
+  }
+
+  .movementCell {
+    min-height: 14mm;
+    padding: 1mm;
+  }
+
+  .movementEntry {
+    padding: 1mm;
+    font-size: 5.5pt;
+  }
+
+  .sectionLabel,
+  .sectionBand {
+    min-height: 6mm;
+  }
+
+  .positionLabel,
+  .positionCell {
+    min-height: 11mm;
+    padding: 1.5mm;
+  }
+
+  .assignment {
+    margin-bottom: 1mm;
+    padding: 1mm;
+    font-size: 5.5pt;
+  }
+
+  .coverage,
+  .missingCoverage {
+    font-size: 5pt;
+  }
+
+  .dropTargetActive,
+  .draggableAssignment:focus-within {
+    box-shadow: none;
+  }
+
+  .dragHandle {
+    display: none;
+  }
+}

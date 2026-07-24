@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Builds
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs and editor files
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Supabase CLI
+.supabase/
+supabase/.temp/
+
+# Local audit artifacts and disposable database probes
+tmp/

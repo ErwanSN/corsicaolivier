@@ -1,0 +1,174 @@
+.backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(0 0 0 / 45%);
+}
+
+.panel {
+  width: min(34rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 2px solid #18181b;
+  background: #ffffff;
+  box-shadow: -12px 0 30px rgb(0 0 0 / 18%);
+}
+
+.header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-bottom: 1px solid #a1a1aa;
+  background: #ffffff;
+}
+
+.header h2 {
+  margin-top: 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.eyebrow {
+  color: #71717a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+  color: #18181b;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field label {
+  color: #27272a;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.field small {
+  color: #71717a;
+  font-size: 0.68rem;
+}
+
+.timeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.durationSummary {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #969696;
+  background: #c0c0c0;
+  color: #000000;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.rules {
+  padding: 0.75rem;
+  border-left: 4px solid #969696;
+  background: #f4f4f5;
+  color: #52525b;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.error {
+  padding: 0.75rem;
+  border: 1px solid #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.deleteConfirmation {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border: 1px solid #dc2626;
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: 0.75rem;
+}
+
+.deleteConfirmation > div,
+.footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.confirmDeleteButton,
+.deleteButton {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #b91c1c;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.confirmDeleteButton {
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.deleteButton {
+  background: #ffffff;
+  color: #b91c1c;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d4d4d8;
+}
+
+@media (max-width: 560px) {
+  .timeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .footer > div,
+  .footer button {
+    width: 100%;
+  }
+}
