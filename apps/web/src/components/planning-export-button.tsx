@@ -1,11 +1,16 @@
 'use client';
 
 type PlanningExportButtonProps = Readonly<{
+  draftVersionNumber?: number;
   siteName: string;
   weekStart: string;
 }>;
 
-function safeExportName(siteName: string, weekStart: string): string {
+function safeExportName(
+  siteName: string,
+  weekStart: string,
+  draftVersionNumber?: number,
+): string {
   const safeSiteName = siteName
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -13,7 +18,9 @@ function safeExportName(siteName: string, weekStart: string): string {
     .replace(/^-|-$/g, '')
     .toLowerCase();
 
-  return `planning-${safeSiteName || 'zone'}-${weekStart}`;
+  return `planning-${safeSiteName || 'zone'}-${weekStart}${
+    draftVersionNumber ? `-brouillon-v${draftVersionNumber}` : ''
+  }`;
 }
 
 function readableStyles(): string {
@@ -29,13 +36,14 @@ function readableStyles(): string {
 }
 
 export function PlanningExportButton({
+  draftVersionNumber,
   siteName,
   weekStart,
 }: PlanningExportButtonProps) {
   const exportPdf = () => {
     const previousTitle = document.title;
 
-    document.title = safeExportName(siteName, weekStart);
+    document.title = safeExportName(siteName, weekStart, draftVersionNumber);
     window.addEventListener(
       'afterprint',
       () => {
@@ -91,6 +99,10 @@ export function PlanningExportButton({
       }
       [data-svg-export] button {
         cursor: default !important;
+      }
+      [data-svg-export] [data-search-state] {
+        opacity: 1 !important;
+        box-shadow: none !important;
       }`;
 
     const wrapper = document.createElement('div');
@@ -133,7 +145,11 @@ export function PlanningExportButton({
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.download = `${safeExportName(siteName, weekStart)}.svg`;
+    link.download = `${safeExportName(
+      siteName,
+      weekStart,
+      draftVersionNumber,
+    )}.svg`;
     link.href = url;
     link.hidden = true;
     document.body.append(link);
@@ -145,10 +161,14 @@ export function PlanningExportButton({
   return (
     <>
       <button className="secondary-button" onClick={exportPdf} type="button">
-        Exporter en PDF
+        {draftVersionNumber
+          ? 'Exporter le brouillon en PDF'
+          : 'Exporter en PDF'}
       </button>
       <button className="secondary-button" onClick={exportSvg} type="button">
-        Exporter en SVG
+        {draftVersionNumber
+          ? 'Exporter le brouillon en SVG'
+          : 'Exporter en SVG'}
       </button>
     </>
   );

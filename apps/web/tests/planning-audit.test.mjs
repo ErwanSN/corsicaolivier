@@ -234,6 +234,70 @@ test('le calendrier permet l’édition manuelle complète sans quitter la semai
   assert.match(action, /method: 'DELETE'/);
 });
 
+test('le planning reste pilotable avec une équipe de 120 collaborateurs', async () => {
+  const grid = await readFile(
+    'src/components/weekly-planning-grid.tsx',
+    'utf8',
+  );
+  const editor = await readFile(
+    'src/components/planning-assignment-editor.tsx',
+    'utf8',
+  );
+
+  assert.match(grid, /Retrouver un collaborateur/);
+  assert.match(grid, /Nom ou matricule/);
+  assert.match(grid, /highlightedAgentIds/);
+  assert.match(grid, /matchingAssignmentCount/);
+  assert.match(grid, /Agents planifiés/);
+  assert.match(grid, /missingAgentSlots/);
+  assert.match(editor, /Rechercher par nom ou matricule/);
+  assert.match(editor, /eligibleAgents/);
+  assert.match(editor, /matchingAgents/);
+  assert.match(editor, /employee_number/);
+  assert.match(editor, /localeCompare/);
+});
+
+test('les changements de dernière minute restent visibles et traçables', async () => {
+  const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
+  const editor = await readFile(
+    'src/components/planning-assignment-editor.tsx',
+    'utf8',
+  );
+  const editorAction = await readFile(
+    'src/app/tools/planning/planning-editor-action.ts',
+    'utf8',
+  );
+  const grid = await readFile(
+    'src/components/weekly-planning-grid.tsx',
+    'utf8',
+  );
+  const editableSchedule = await readFile(
+    '../../supabase/migrations/202607200026_automatic_editable_schedule.sql',
+    'utf8',
+  );
+  const manualEditor = await readFile(
+    '../../supabase/migrations/202607220026_full_manual_planning_editor.sql',
+    'utf8',
+  );
+
+  assert.match(page, /Brouillon de modifications/);
+  assert.match(page, /dernière\s+minute/);
+  assert.match(page, /Publier les modifications/);
+  assert.match(page, /Motif des modifications/);
+  assert.match(page, /publishedVersion/);
+  assert.match(editor, /Modification de dernière minute/);
+  assert.match(editor, /Motif opérationnel/);
+  assert.match(editor, /changeReason/);
+  assert.match(editorAction, /Dernière minute —/);
+  assert.match(editorAction, /changeReason/);
+  assert.match(grid, /lastMinuteBadge/);
+  assert.match(editableSchedule, /create_followup_draft_after_publication/);
+  assert.match(editableSchedule, /source_shift_id/);
+  assert.match(manualEditor, /'before'/);
+  assert.match(manualEditor, /'after'/);
+  assert.match(manualEditor, /outbox_events/);
+});
+
 test('la semaine possède un export PDF en format A4 paysage', async () => {
   const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
   const button = await readFile(

@@ -3,6 +3,103 @@
   gap: 0.65rem;
 }
 
+.commandBar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+}
+
+.agentSearch {
+  display: grid;
+  width: min(30rem, 100%);
+  gap: 0.3rem;
+}
+
+.agentSearch label {
+  color: #27272a;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.agentSearch p {
+  color: #71717a;
+  font-size: 0.65rem;
+}
+
+.searchControl {
+  display: flex;
+}
+
+.searchControl input {
+  width: 100%;
+  height: 2.6rem;
+  border: 1px solid #71717a;
+  background: #ffffff;
+  padding: 0 0.75rem;
+  color: #18181b;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.searchControl input:focus {
+  border-color: #dc2626;
+  outline: 2px solid #fee2e2;
+}
+
+.searchControl button {
+  min-width: 4.5rem;
+  border: 1px solid #71717a;
+  border-left: 0;
+  background: #f4f4f5;
+  color: #3f3f46;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.planningStats {
+  display: grid;
+  min-width: 23rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid #d4d4d8;
+}
+
+.planningStats > div {
+  padding: 0.55rem 0.7rem;
+  border-right: 1px solid #d4d4d8;
+}
+
+.planningStats > div:last-child {
+  border-right: 0;
+}
+
+.planningStats dt {
+  color: #71717a;
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.planningStats dd {
+  margin-top: 0.15rem;
+  color: #18181b;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.attentionStat {
+  background: #fef2f2;
+}
+
+.attentionStat dt,
+.attentionStat dd {
+  color: #991b1b;
+}
+
 .dragHint {
   display: flex;
   align-items: center;
@@ -342,6 +439,16 @@
   opacity: 0.45;
 }
 
+.searchMatch {
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 0 3px #dc2626;
+}
+
+.searchMuted {
+  opacity: 0.16;
+}
+
 .assignment strong,
 .assignment span {
   overflow: hidden;
@@ -351,6 +458,18 @@
 
 .assignment strong {
   font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.lastMinuteBadge {
+  width: fit-content;
+  padding: 0.08rem 0.25rem;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.5rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -385,6 +504,16 @@
 }
 
 @media (max-width: 767px) {
+  .commandBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planningStats {
+    width: 100%;
+    min-width: 0;
+  }
+
   .dragHint {
     align-items: flex-start;
     flex-direction: column;
@@ -405,6 +534,7 @@
   }
 
   .dragHint,
+  .commandBar,
   .addAssignment,
   .movePending,
   .moveSuccess,
@@ -475,8 +605,13 @@
   }
 
   .dropTargetActive,
-  .draggableAssignment:focus-within {
+  .draggableAssignment:focus-within,
+  .searchMatch {
     box-shadow: none;
+  }
+
+  .searchMuted {
+    opacity: 1;
   }
 
   .dragHandle {

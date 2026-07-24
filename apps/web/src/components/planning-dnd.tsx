@@ -24,6 +24,7 @@ type PlanningDraggableAssignmentProps = Readonly<{
   editable: boolean;
   id: string;
   onEdit: () => void;
+  searchState?: 'match' | 'muted';
 }>;
 
 export function PlanningDropCell({
@@ -57,6 +58,7 @@ export function PlanningDraggableAssignment({
   editable,
   id,
   onEdit,
+  searchState,
 }: PlanningDraggableAssignmentProps) {
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } =
     useDraggable({
@@ -69,7 +71,14 @@ export function PlanningDraggableAssignment({
     <article
       className={`${styles.assignment} ${
         editable ? styles.draggableAssignment : ''
-      } ${isDragging ? styles.draggingAssignment : ''}`}
+      } ${isDragging ? styles.draggingAssignment : ''} ${
+        searchState === 'match'
+          ? styles.searchMatch
+          : searchState === 'muted'
+            ? styles.searchMuted
+            : ''
+      }`}
+      data-search-state={searchState}
       ref={setNodeRef}
     >
       <button

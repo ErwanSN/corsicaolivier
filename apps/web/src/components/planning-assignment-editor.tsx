@@ -72,6 +72,14 @@ function durationLabel(startsAt: string, endsAt: string, breakMinutes: number) {
   return `${hours} h ${String(minutes).padStart(2, '0')} de travail planifié`;
 }
 
+function normalizedSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('fr-FR')
+    .trim();
+}
+
 export function PlanningAssignmentEditor({
   agents,
   calls,
@@ -83,12 +91,15 @@ export function PlanningAssignmentEditor({
   vessels,
 }: PlanningAssignmentEditorProps) {
   const [agentId, setAgentId] = useState(target.agentId);
+  const [agentSearch, setAgentSearch] = useState('');
   const [positionId, setPositionId] = useState(target.positionId);
   const [portCallId, setPortCallId] = useState(target.portCallId ?? '');
   const [startsAt, setStartsAt] = useState(target.startsAt);
   const [endsAt, setEndsAt] = useState(target.endsAt);
   const [breakMinutes, setBreakMinutes] = useState(target.breakMinutes);
   const [note, setNote] = useState(target.note);
+  const [lastMinuteChange, setLastMinuteChange] = useState(false);
+  const [changeReason, setChangeReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -105,6 +116,35 @@ export function PlanningAssignmentEditor({
         ),
     [calls, portCallId],
   );
+  const eligibleAgents = useMemo(
+    () =>
+      agents
+        .filter((agent) => agent.active || agent.id === agentId)
+        .sort((left, right) =>
+          left.display_name.localeCompare(right.display_name, 'fr-FR', {
+            sensitivity: 'base',
+          }),
+        ),
+    [agentId, agents],
+  );
+  const matchingAgents = useMemo(() => {
+    const query = normalizedSearch(agentSearch);
+    if (!query) return eligibleAgents;
+
+    return eligibleAgents.filter((agent) =>
+      normalizedSearch(
+        `${agent.display_name} ${agent.employee_number}`,
+      ).includes(query),
+    );
+  }, [agentSearch, eligibleAgents]);
+  const visibleAgents = useMemo(() => {
+    const selectedAgent = eligibleAgents.find((agent) => agent.id === agentId);
+
+    return selectedAgent &&
+      !matchingAgents.some((agent) => agent.id === selectedAgent.id)
+      ? [selectedAgent, ...matchingAgents]
+      : matchingAgents;
+  }, [agentId, eligibleAgents, matchingAgents]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -130,6 +170,7 @@ export function PlanningAssignmentEditor({
         startsAt,
         endsAt,
         breakMinutes,
+        changeReason: lastMinuteChange ? changeReason : '',
         note,
         timeZone,
       });
@@ -210,21 +251,52 @@ export function PlanningAssignmentEditor({
         >
           <div className={styles.field}>
             <label htmlFor="planning-editor-agent">Agent affecté</label>
+            <div className={styles.agentSearch}>
+              <input
+                aria-label="Rechercher un agent"
+                autoComplete="off"
+                autoFocus
+                className="field-input"
+                disabled={isPending}
+                onChange={(event) => setAgentSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.preventDefault();
+                }}
+                placeholder="Rechercher par nom ou matricule"
+                type="search"
+                value={agentSearch}
+              />
+              {agentSearch ? (
+                <button
+                  disabled={isPending}
+                  onClick={() => setAgentSearch('')}
+                  type="button"
+                >
+                  Effacer
+                </button>
+              ) : null}
+            </div>
+            <p className={styles.agentResultCount} aria-live="polite">
+              {agentSearch
+                ? `${matchingAgents.length} résultat${matchingAgents.length > 1 ? 's' : ''}`
+                : `${eligibleAgents.length} collaborateur${eligibleAgents.length > 1 ? 's' : ''} disponible${eligibleAgents.length > 1 ? 's' : ''}`}
+            </p>
             <PlatformSelect
               disabled={isPending}
               id="planning-editor-agent"
-              onChange={(event) => setAgentId(event.target.value)}
+              onChange={(event) => {
+                setAgentId(event.target.value);
+                setAgentSearch('');
+              }}
               required
               value={agentId}
             >
               <option value="">Choisir un agent</option>
-              {agents
-                .filter((agent) => agent.active || agent.id === agentId)
-                .map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.display_name}
-                  </option>
-                ))}
+              {visibleAgents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.display_name} · {agent.employee_number}
+                </option>
+              ))}
             </PlatformSelect>
             <small>
               Changer l’agent conserve le poste et les horaires saisis.
@@ -317,6 +389,45 @@ export function PlanningAssignmentEditor({
               ))}
             </PlatformSelect>
           </div>
+
+          <fieldset className={styles.lastMinuteChange}>
+            <label className={styles.lastMinuteToggle}>
+              <input
+                checked={lastMinuteChange}
+                disabled={isPending}
+                onChange={(event) => setLastMinuteChange(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <strong>Modification de dernière minute</strong>
+                <small>
+                  Remplacement, absence soudaine ou ajustement opérationnel.
+                </small>
+              </span>
+            </label>
+            {lastMinuteChange ? (
+              <div className={styles.field}>
+                <label htmlFor="planning-editor-change-reason">
+                  Motif opérationnel
+                </label>
+                <input
+                  className="field-input"
+                  disabled={isPending}
+                  id="planning-editor-change-reason"
+                  maxLength={200}
+                  minLength={3}
+                  onChange={(event) => setChangeReason(event.target.value)}
+                  placeholder="Ex. absence signalée à 06:15"
+                  required
+                  value={changeReason}
+                />
+                <small>
+                  Le motif sera conservé dans la note et dans l’audit du
+                  changement.
+                </small>
+              </div>
+            ) : null}
+          </fieldset>
 
           <div className={styles.field}>
             <label htmlFor="planning-editor-note">Note interne</label>

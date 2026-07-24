@@ -77,6 +77,29 @@
   font-size: 0.68rem;
 }
 
+.agentSearch {
+  display: flex;
+}
+
+.agentSearch input {
+  min-width: 0;
+}
+
+.agentSearch button {
+  min-width: 4.5rem;
+  border: 1px solid #71717a;
+  border-left: 0;
+  background: #f4f4f5;
+  color: #3f3f46;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.agentResultCount {
+  color: #71717a;
+  font-size: 0.68rem;
+}
+
 .timeGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -90,6 +113,44 @@
   color: #000000;
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.lastMinuteChange {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.lastMinuteToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #78350f;
+  cursor: pointer;
+}
+
+.lastMinuteToggle input {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  accent-color: #b45309;
+}
+
+.lastMinuteToggle span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.lastMinuteToggle strong {
+  font-size: 0.75rem;
+}
+
+.lastMinuteToggle small {
+  color: #92400e;
+  font-size: 0.68rem;
 }
 
 .rules {

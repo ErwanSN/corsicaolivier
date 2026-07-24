@@ -59,6 +59,19 @@ function rangeLabel(range: WeeklyPlanningRange): string {
   return `${start} — ${end}`;
 }
 
+function publicationLabel(
+  publishedAt: string | null,
+  timeZone: string,
+): string {
+  if (!publishedAt) return 'précédemment';
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone,
+  }).format(new Date(publishedAt));
+}
+
 export default async function PlanningPage({
   searchParams,
 }: PlanningPageProps) {
@@ -142,6 +155,9 @@ export default async function PlanningPage({
   const activeBundle = periodBundles.at(0);
   const draftVersion = activeBundle?.versions.find(
     (version) => version.status === 'draft',
+  );
+  const publishedVersion = activeBundle?.versions.find(
+    (version) => version.status === 'published',
   );
   const activeVersionId = activeBundle?.content?.version.id;
   const hasError = Boolean(
@@ -246,6 +262,7 @@ export default async function PlanningPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <PlanningExportButton
+              draftVersionNumber={draftVersion?.version_number}
               siteName={site.name}
               weekStart={range.startsOn}
             />
@@ -255,7 +272,18 @@ export default async function PlanningPage({
                 download
                 href={`/tools/planning/export/${activeVersionId}`}
               >
-                Exporter en Excel
+                {draftVersion
+                  ? 'Exporter le brouillon en Excel'
+                  : 'Exporter en Excel'}
+              </a>
+            ) : null}
+            {draftVersion && publishedVersion ? (
+              <a
+                className="secondary-button"
+                download
+                href={`/tools/planning/export/${publishedVersion.id}`}
+              >
+                Exporter la version publiée en Excel
               </a>
             ) : null}
           </div>
@@ -286,16 +314,50 @@ export default async function PlanningPage({
       ) : null}
 
       {draftVersion ? (
+        <aside
+          className="border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          data-print-hide
+        >
+          <p className="font-semibold">
+            {publishedVersion
+              ? `Brouillon de modifications — version ${draftVersion.version_number}`
+              : `Brouillon initial — version ${draftVersion.version_number}`}
+          </p>
+          <p className="mt-1 leading-6">
+            {publishedVersion ? (
+              <>
+                La version {publishedVersion.version_number}, publiée{' '}
+                {publicationLabel(publishedVersion.published_at, site.timezone)}
+                , reste la référence. Toute modification, y compris de dernière
+                minute, doit être republiée avec un motif.
+              </>
+            ) : (
+              <>
+                Aucun planning n’est encore publié pour cette période. Les
+                exports portent explicitement la mention brouillon.
+              </>
+            )}
+          </p>
+        </aside>
+      ) : null}
+
+      {draftVersion ? (
         <details
           className="border border-zinc-300 bg-white p-4"
           data-print-hide
         >
           <summary className="cursor-pointer text-sm font-semibold">
-            Publier cette semaine
+            {publishedVersion
+              ? 'Publier les modifications'
+              : 'Publier cette semaine'}
           </summary>
+          <p className="mt-3 text-sm leading-6 text-zinc-600">
+            Le motif est conservé avec la version pour assurer la traçabilité
+            des changements.
+          </p>
           <form
             action={publishSchedule}
-            className="mt-4 flex flex-col gap-2 sm:flex-row"
+            className="mt-3 flex flex-col gap-2 sm:flex-row"
           >
             <input
               name="organizationId"
@@ -309,11 +371,17 @@ export default async function PlanningPage({
               className="field-input flex-1"
               minLength={3}
               name="reason"
-              placeholder="Motif de publication"
+              placeholder={
+                publishedVersion
+                  ? 'Motif des modifications'
+                  : 'Motif de publication'
+              }
               required
             />
             <button className="primary-button" type="submit">
-              Confirmer la publication
+              {publishedVersion
+                ? 'Publier les modifications'
+                : 'Confirmer la publication'}
             </button>
           </form>
         </details>

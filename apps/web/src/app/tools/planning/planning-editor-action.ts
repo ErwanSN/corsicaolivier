@@ -25,6 +25,7 @@ export type SavePlanningAssignmentInput = Readonly<{
   startsAt: string;
   endsAt: string;
   breakMinutes: number;
+  changeReason: string;
   note: string;
   timeZone: string;
 }>;
@@ -134,6 +135,9 @@ function validateSaveInput(
     !Number.isInteger(input.breakMinutes) ||
     input.breakMinutes < 0 ||
     input.breakMinutes > 720 ||
+    (input.changeReason.trim().length > 0 &&
+      input.changeReason.trim().length < 3) ||
+    input.changeReason.length > 200 ||
     input.note.length > 500
   ) {
     return null;
@@ -162,6 +166,19 @@ export async function savePlanningAssignment(
     input.mode === 'create'
       ? `/schedule-versions/${input.scheduleVersionId}/shifts`
       : `/schedule-versions/${input.scheduleVersionId}/assignments/${input.assignmentId}/details`;
+  const trimmedReason = input.changeReason.trim();
+  const trimmedNote = input.note.trim();
+  const note = trimmedReason
+    ? `Dernière minute — ${trimmedReason}${trimmedNote ? `\n${trimmedNote}` : ''}`
+    : trimmedNote;
+
+  if (note.length > 500) {
+    return {
+      ok: false,
+      error: 'Le motif et la note sont limités à 500 caractères au total.',
+    };
+  }
+
   const result = await apiFetch(endpoint, {
     method: input.mode === 'create' ? 'POST' : 'PATCH',
     headers: scopedHeaders(input.organizationId, input.siteId),
@@ -172,7 +189,7 @@ export async function savePlanningAssignment(
       startsAt: instants.startsAtIso,
       endsAt: instants.endsAtIso,
       breakMinutes: input.breakMinutes,
-      note: input.note.trim() || null,
+      note: note || null,
     }),
   });
 
@@ -183,8 +200,12 @@ export async function savePlanningAssignment(
     ok: true,
     message:
       input.mode === 'create'
-        ? 'Affectation ajoutée au planning.'
-        : 'Affectation mise à jour.',
+        ? trimmedReason
+          ? 'Affectation urgente ajoutée au planning.'
+          : 'Affectation ajoutée au planning.'
+        : trimmedReason
+          ? 'Modification de dernière minute enregistrée.'
+          : 'Affectation mise à jour.',
   };
 }
 

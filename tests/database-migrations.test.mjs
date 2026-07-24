@@ -274,6 +274,24 @@ test('chaque semaine publiée conserve automatiquement un brouillon éditable', 
   assert.match(sql, /copie de travail automatique du planning publié/i);
 });
 
+test('un approbateur peut publier et déclencher le brouillon de suivi', async () => {
+  const migrations = await loadMigrations();
+  const sql = migrations.find(({ path }) =>
+    path.endsWith('202607240028_allow_approver_followup_draft.sql'),
+  )?.sql;
+
+  assert.ok(sql);
+  assert.match(sql, /function public\.ensure_editable_schedule_for_period/);
+  assert.match(sql, /'platform_admin',\s*'planning_admin',\s*'planner'/);
+  assert.match(sql, /pg_trigger_depth\(\) > 0/);
+  assert.match(sql, /array\['approver'\]::public\.app_role\[\]/);
+  assert.match(sql, /source_shift_id/);
+  assert.match(
+    sql,
+    /grant execute on function public\.ensure_editable_schedule_for_period/,
+  );
+});
+
 test('les scénarios de démonstration restent identifiables et complets', async () => {
   const migrations = await loadMigrations();
   const source = migrations

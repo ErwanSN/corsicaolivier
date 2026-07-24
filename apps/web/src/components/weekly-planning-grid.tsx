@@ -121,6 +121,14 @@ function timeLabel(value: string | null, timeZone: string): string {
   }).format(new Date(value));
 }
 
+function normalizedSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('fr-FR')
+    .trim();
+}
+
 function localInputValue(value: string, timeZone: string): string {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', {
@@ -218,6 +226,7 @@ export function PlanningGrid({
   const [editorTarget, setEditorTarget] = useState<PlanningEditorTarget | null>(
     null,
   );
+  const [agentSearch, setAgentSearch] = useState('');
   const [isPending, startTransition] = useTransition();
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -335,6 +344,67 @@ export function PlanningGrid({
 
     return index;
   }, [data.assignments, moveOverrides, timeZone]);
+  const normalizedAgentSearch = useMemo(
+    () => normalizedSearch(agentSearch),
+    [agentSearch],
+  );
+  const highlightedAgentIds = useMemo<Set<string> | null>(() => {
+    if (!normalizedAgentSearch) return null;
+
+    return new Set(
+      agents
+        .filter((agent) =>
+          normalizedSearch(
+            `${agent.display_name} ${agent.employee_number}`,
+          ).includes(normalizedAgentSearch),
+        )
+        .map((agent) => agent.id),
+    );
+  }, [agents, normalizedAgentSearch]);
+  const matchingAssignmentCount = useMemo(() => {
+    if (!highlightedAgentIds) return 0;
+
+    return data.assignments.reduce((count, assignment) => {
+      const shift = data.shiftById.get(assignment.planning_shift_id);
+      return count + (shift && highlightedAgentIds.has(shift.agent_id) ? 1 : 0);
+    }, 0);
+  }, [data.assignments, data.shiftById, highlightedAgentIds]);
+  const planningSummary = useMemo(() => {
+    const scheduledAgentIds = new Set<string>();
+
+    for (const assignment of data.assignments) {
+      const shift = data.shiftById.get(assignment.planning_shift_id);
+      if (shift) scheduledAgentIds.add(shift.agent_id);
+    }
+
+    let missingAgentSlots = 0;
+    for (const requirement of data.requirements) {
+      const key = cellKey(
+        requirement.position_id,
+        dateKey(requirement.starts_at, timeZone),
+      );
+      const assignments = assignmentsByCell.get(key) ?? [];
+      const covered = minimumConcurrentCoverage(
+        requirement,
+        assignmentsMatchingRequirement(requirement, assignments),
+      );
+      missingAgentSlots += Math.max(0, requirement.required_agents - covered);
+    }
+
+    return {
+      activeAgents: agents.filter((agent) => agent.active).length,
+      assignments: data.assignments.length,
+      missingAgentSlots,
+      scheduledAgents: scheduledAgentIds.size,
+    };
+  }, [
+    agents,
+    assignmentsByCell,
+    data.assignments,
+    data.requirements,
+    data.shiftById,
+    timeZone,
+  ]);
 
   const openEditAssignment = (assignmentId: string) => {
     const assignment = data.assignmentById.get(assignmentId);
@@ -500,6 +570,59 @@ export function PlanningGrid({
 
   return (
     <div className={styles.planningArea}>
+      <section
+        aria-label="Pilotage du planning"
+        className={styles.commandBar}
+        data-print-hide
+      >
+        <div className={styles.agentSearch}>
+          <label htmlFor="planning-agent-search">
+            Retrouver un collaborateur
+          </label>
+          <div className={styles.searchControl}>
+            <input
+              autoComplete="off"
+              id="planning-agent-search"
+              onChange={(event) => setAgentSearch(event.target.value)}
+              placeholder="Nom ou matricule"
+              type="search"
+              value={agentSearch}
+            />
+            {agentSearch ? (
+              <button onClick={() => setAgentSearch('')} type="button">
+                Effacer
+              </button>
+            ) : null}
+          </div>
+          <p aria-live="polite">
+            {highlightedAgentIds
+              ? `${matchingAssignmentCount} affectation${matchingAssignmentCount > 1 ? 's' : ''} trouvée${matchingAssignmentCount > 1 ? 's' : ''}`
+              : 'La recherche met en évidence toutes les affectations de la personne.'}
+          </p>
+        </div>
+        <dl className={styles.planningStats}>
+          <div>
+            <dt>Agents planifiés</dt>
+            <dd>
+              {planningSummary.scheduledAgents}/{planningSummary.activeAgents}
+            </dd>
+          </div>
+          <div>
+            <dt>Affectations</dt>
+            <dd>{planningSummary.assignments}</dd>
+          </div>
+          <div
+            className={
+              planningSummary.missingAgentSlots
+                ? styles.attentionStat
+                : undefined
+            }
+          >
+            <dt>Postes à couvrir</dt>
+            <dd>{planningSummary.missingAgentSlots}</dd>
+          </div>
+        </dl>
+      </section>
       {hasEditableAssignments ? (
         <div className={styles.dragHint} data-svg-hide>
           <p>
@@ -535,6 +658,7 @@ export function PlanningGrid({
           assignmentsByCell={assignmentsByCell}
           data={data}
           days={days}
+          highlightedAgentIds={highlightedAgentIds}
           interactions={interactions}
           siteName={siteName}
         />
@@ -563,12 +687,14 @@ function WeeklyTable({
   assignmentsByCell,
   data,
   days,
+  highlightedAgentIds,
   interactions,
   siteName,
 }: Readonly<{
   assignmentsByCell: Map<string, ShiftAssignment[]>;
   data: PlanningData;
   days: CalendarDay[];
+  highlightedAgentIds: ReadonlySet<string> | null;
   interactions: PlanningInteractions;
   siteName: string;
 }>) {
@@ -606,6 +732,7 @@ function WeeklyTable({
             assignmentsByCell={assignmentsByCell}
             data={data}
             days={days}
+            highlightedAgentIds={highlightedAgentIds}
             interactions={interactions}
             key={position.id}
             position={position}
@@ -620,6 +747,7 @@ function WeeklyTable({
                 assignmentsByCell={assignmentsByCell}
                 data={data}
                 days={days}
+                highlightedAgentIds={highlightedAgentIds}
                 interactions={interactions}
                 key={position.id}
                 position={position}
@@ -683,12 +811,14 @@ function WeekPositionRow({
   assignmentsByCell,
   data,
   days,
+  highlightedAgentIds,
   interactions,
   position,
 }: Readonly<{
   assignmentsByCell: Map<string, ShiftAssignment[]>;
   data: PlanningData;
   days: CalendarDay[];
+  highlightedAgentIds: ReadonlySet<string> | null;
   interactions: PlanningInteractions;
   position: Position;
 }>) {
@@ -724,6 +854,7 @@ function WeekPositionRow({
               <AssignmentEntry
                 assignment={assignment}
                 data={data}
+                highlightedAgentIds={highlightedAgentIds}
                 interactions={interactions}
                 key={assignment.id}
               />
@@ -824,10 +955,12 @@ function MovementEntry({
 function AssignmentEntry({
   assignment,
   data,
+  highlightedAgentIds,
   interactions,
 }: Readonly<{
   assignment: ShiftAssignment;
   data: PlanningData;
+  highlightedAgentIds: ReadonlySet<string> | null;
   interactions: PlanningInteractions;
 }>) {
   const shift = data.shiftById.get(assignment.planning_shift_id);
@@ -844,8 +977,18 @@ function AssignmentEntry({
       editable={editable}
       id={assignment.id}
       onEdit={() => interactions.onEdit(assignment.id)}
+      searchState={
+        highlightedAgentIds
+          ? shift && highlightedAgentIds.has(shift.agent_id)
+            ? 'match'
+            : 'muted'
+          : undefined
+      }
     >
       <strong>{agentName}</strong>
+      {shift?.note?.startsWith('Dernière minute —') ? (
+        <em className={styles.lastMinuteBadge}>Dernière minute</em>
+      ) : null}
       <span>
         {timeLabel(assignment.starts_at, data.timeZone)}–
         {timeLabel(assignment.ends_at, data.timeZone)}
@@ -863,11 +1006,9 @@ function CoverageEntry({
   data: PlanningData;
   requirement: StaffingRequirement;
 }>) {
-  const matchingAssignments = assignments.filter(
-    (assignment) =>
-      assignment.staffing_requirement_id === requirement.id ||
-      (!assignment.staffing_requirement_id &&
-        assignment.port_call_id === requirement.port_call_id),
+  const matchingAssignments = assignmentsMatchingRequirement(
+    requirement,
+    assignments,
   );
   const covered = minimumConcurrentCoverage(requirement, matchingAssignments);
   const missing = covered < requirement.required_agents;
@@ -878,6 +1019,18 @@ function CoverageEntry({
       {timeLabel(requirement.ends_at, data.timeZone)} · {covered}/
       {requirement.required_agents}
     </p>
+  );
+}
+
+function assignmentsMatchingRequirement(
+  requirement: StaffingRequirement,
+  assignments: ShiftAssignment[],
+): ShiftAssignment[] {
+  return assignments.filter(
+    (assignment) =>
+      assignment.staffing_requirement_id === requirement.id ||
+      (!assignment.staffing_requirement_id &&
+        assignment.port_call_id === requirement.port_call_id),
   );
 }
 
