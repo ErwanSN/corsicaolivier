@@ -60,10 +60,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
           />
         </Link>
 
-        <nav aria-label="Navigation principale" className="flex-1 p-3">
-          <p className="px-3 pb-2 pt-3 text-xs font-medium text-zinc-400">
-            Espace de travail
-          </p>
+        <nav aria-label="Navigation principale" className="flex-1 p-3 pt-4">
           <div className="space-y-1">
             {navigation.map((item) => {
               const current = isCurrentPath(pathname, item.href);
@@ -109,7 +106,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
 
       <div className="lg:pl-56" data-app-shell-content>
         <header
-          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8"
+          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:hidden"
           data-app-shell-header
         >
           <div className="flex items-center gap-3">

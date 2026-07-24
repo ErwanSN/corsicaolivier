@@ -169,11 +169,8 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Mouvements</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Escales
-          </h1>
-          <p className="mt-3 text-zinc-600">
+          <h1 className="text-3xl font-semibold tracking-tight">Escales</h1>
+          <p className="mt-2 text-zinc-600">
             Ajoutez les arrivées et départs, puis signalez simplement les
             changements d’horaire.
           </p>

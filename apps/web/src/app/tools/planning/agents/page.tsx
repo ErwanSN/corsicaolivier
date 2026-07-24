@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { SiteSwitcher } from '../../../../components/site-switcher';
 import { PlatformSelect } from '../../../../components/ui/platform-select';
 import { apiFetch } from '../../../../lib/api/server';
 import type { Agent, Site } from '../../../../lib/api/types';
@@ -66,22 +67,14 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
               : ''}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link className="secondary-button" href="/tools/planning/zones">
-            Gérer les zones
+        {selectedSite ? (
+          <Link
+            className="primary-button"
+            href={`/tools/planning/agents?site=${selectedSite.id}&add=1`}
+          >
+            Ajouter un collaborateur
           </Link>
-          <Link className="secondary-button" href="/tools/planning/groupes">
-            Gérer les groupes
-          </Link>
-          {selectedSite ? (
-            <Link
-              className="primary-button"
-              href={`/tools/planning/agents?site=${selectedSite.id}&add=1`}
-            >
-              + Ajouter un collaborateur
-            </Link>
-          ) : null}
-        </div>
+        ) : null}
       </header>
 
       {params.saved ? (
@@ -102,40 +95,17 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
       ) : null}
 
       {sites.length > 1 ? (
-        <section className="border border-zinc-300 bg-white p-4">
-          <p className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
-            1. Choisir la zone à afficher
-          </p>
-          <nav
-            aria-label="Choix de la zone"
-            className="mt-3 flex flex-wrap gap-2"
-          >
-            {sites.map((site) => (
-              <Link
-                className={`border px-4 py-2 text-sm font-semibold transition ${
-                  selectedSite?.id === site.id
-                    ? 'border-zinc-900 bg-zinc-900 text-white'
-                    : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-900'
-                }`}
-                href={`/tools/planning/agents?site=${site.id}`}
-                key={site.id}
-              >
-                {site.name.replace('Marseille ', '')}
-              </Link>
-            ))}
-          </nav>
-        </section>
+        <SiteSwitcher
+          path="/tools/planning/agents"
+          selectedSiteId={selectedSite?.id ?? ''}
+          sites={sites}
+        />
       ) : null}
 
       {params.add && selectedSite ? (
         <section className="rounded-2xl border border-zinc-300 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold tracking-wide text-red-700 uppercase">
-                Ajout rapide
-              </p>
-              <h2 className="text-lg font-semibold">Nouveau collaborateur</h2>
-            </div>
+            <h2 className="text-lg font-semibold">Nouveau collaborateur</h2>
             <Link
               className="text-sm text-zinc-500 hover:text-zinc-950"
               href={`/tools/planning/agents?site=${selectedSite.id}`}

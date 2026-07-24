@@ -158,13 +158,9 @@ export default async function PlanningPage({
       <header className="border-b border-zinc-300 pb-4">
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div>
-            <p className="eyebrow">Exploitation</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-semibold tracking-tight">
               Planning opérationnel
             </h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              Escales, besoins et affectations par poste.
-            </p>
             <p className="planning-print-only mt-1 text-sm font-semibold">
               {rangeLabel(range)}
             </p>

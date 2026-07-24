@@ -69,11 +69,10 @@ export default async function ReferentielsPage({
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Réglages</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Postes et ressources
           </h1>
-          <p className="mt-3 text-zinc-600">
+          <p className="mt-2 text-zinc-600">
             Configurez les postes, les compétences nécessaires et les navires.
           </p>
         </div>
@@ -138,8 +137,7 @@ export default async function ReferentielsPage({
 
       {site && params.add === 'vessel' ? (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <p className="eyebrow">Nouveau référentiel</p>
-          <h2 className="mt-2 text-xl font-semibold">Ajouter un navire</h2>
+          <h2 className="text-xl font-semibold">Ajouter un navire</h2>
           <form
             action={createVessel}
             className="mt-6 grid gap-5 md:grid-cols-3"
@@ -173,10 +171,7 @@ export default async function ReferentielsPage({
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
-              <p className="eyebrow">Exigences du poste</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {selectedPosition.name}
-              </h2>
+              <h2 className="text-xl font-semibold">{selectedPosition.name}</h2>
               <p className="mt-2 text-sm text-zinc-500">
                 Une compétence obligatoire manquante ou expirée bloque
                 l’affectation.
@@ -386,8 +381,7 @@ function ReferentialForm({
 }: ReferentialFormProps) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <p className="eyebrow">Nouveau référentiel</p>
-      <h2 className="mt-2 text-xl font-semibold">{title}</h2>
+      <h2 className="text-xl font-semibold">{title}</h2>
       <form action={action} className="mt-6 grid gap-5 md:grid-cols-2">
         <input name="organizationId" type="hidden" value={organizationId} />
         <input name="siteId" type="hidden" value={siteId} />

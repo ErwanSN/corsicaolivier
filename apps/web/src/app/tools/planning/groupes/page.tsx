@@ -71,13 +71,6 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
 
   return (
     <div className="space-y-4">
-      <Link
-        className="inline-flex border-b border-zinc-400 pb-1 text-sm font-semibold text-zinc-700 hover:border-zinc-950 hover:text-zinc-950"
-        href="/tools/planning/agents"
-      >
-        ← Retour aux collaborateurs
-      </Link>
-
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -89,7 +82,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
         </div>
         {organizationId && !params.add && !selectedGroup ? (
           <Link className="primary-button" href="/tools/planning/groupes?add=1">
-            + Créer un groupe
+            Créer un groupe
           </Link>
         ) : null}
       </header>
@@ -111,12 +104,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
       {params.add && organizationId ? (
         <section className="border border-zinc-400 bg-white p-5">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold tracking-wide text-red-700 uppercase">
-                Une seule information est nécessaire
-              </p>
-              <h2 className="text-lg font-semibold">Créer un groupe</h2>
-            </div>
+            <h2 className="text-lg font-semibold">Créer un groupe</h2>
             <Link
               className="text-sm font-medium text-zinc-500 hover:text-zinc-950"
               href="/tools/planning/groupes"

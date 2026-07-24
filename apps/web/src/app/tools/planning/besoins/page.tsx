@@ -70,11 +70,10 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
-          <p className="eyebrow">Dimensionnement</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Profils et besoins opérationnels
           </h1>
-          <p className="mt-3 max-w-3xl text-zinc-600">
+          <p className="mt-2 max-w-3xl text-zinc-600">
             Transformez une escale et sa charge prévisionnelle en postes à
             couvrir, relativement à l’arrivée ou au départ du navire.
           </p>
