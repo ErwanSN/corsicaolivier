@@ -19,7 +19,7 @@ test('la navigation principale reste limitée aux parcours utiles', async () => 
   assert.match(settings, /aria-label="Autres réglages"/);
   assert.match(settings, />\s*Zones\s*</);
   assert.match(settings, />\s*Groupes\s*</);
-  assert.match(settings, />\s*Règles de besoins\s*</);
+  assert.doesNotMatch(settings, />\s*Règles de besoins\s*</);
 });
 
 test('les commandes du planning tiennent dans une seule barre compacte', async () => {
@@ -47,6 +47,18 @@ test('la page des besoins permet de revenir aux réglages', async () => {
   assert.match(needs, /aria-label="Retour aux réglages"/);
   assert.match(needs, /\/tools\/planning\/referentiels\?site=/);
   assert.match(needs, /← Retour aux réglages/);
+});
+
+test('la page des groupes permet de revenir aux réglages', async () => {
+  const groups = await readFile(
+    'src/app/tools/planning/groupes/page.tsx',
+    'utf8',
+  );
+
+  assert.match(groups, /aria-label="Retour aux réglages"/);
+  assert.match(groups, /\/tools\/planning\/referentiels\?site=/);
+  assert.match(groups, /← Retour aux réglages/);
+  assert.match(groups, /groupsHref/);
 });
 
 test('la grille conserve huit lignes et les remplace avec les postes saisis', async () => {

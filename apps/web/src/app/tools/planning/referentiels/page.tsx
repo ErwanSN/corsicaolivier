@@ -109,14 +109,11 @@ export default async function ReferentielsPage({
         <Link className="secondary-button" href="/tools/planning/zones">
           Zones
         </Link>
-        <Link className="secondary-button" href="/tools/planning/groupes">
-          Groupes
-        </Link>
         <Link
           className="secondary-button"
-          href={`/tools/planning/besoins?site=${site?.id ?? ''}`}
+          href={`/tools/planning/groupes?site=${site?.id ?? ''}`}
         >
-          Règles de besoins
+          Groupes
         </Link>
       </nav>
 

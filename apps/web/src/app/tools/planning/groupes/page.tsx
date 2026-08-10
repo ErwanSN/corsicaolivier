@@ -24,6 +24,7 @@ type GroupsPageProps = Readonly<{
     group?: string;
     error?: string;
     saved?: string;
+    site?: string;
   }>;
 }>;
 
@@ -34,6 +35,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
     apiFetch<AgentGroup[]>('/groups'),
   ]);
   const sites = orderSites(sitesResult.data ?? []);
+  const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
   const groups = groupsResult.data ?? [];
   const organizationId =
     groups.at(0)?.organization_id ?? sites.at(0)?.organization_id;
@@ -69,11 +71,19 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
   const weeklyTargetMinutes = selectedGroup?.weekly_target_minutes ?? null;
   const monthlyTargetMinutes = selectedGroup?.monthly_target_minutes ?? null;
+  const groupsHref = `/tools/planning/groupes?site=${site?.id ?? ''}`;
 
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
+          <Link
+            aria-label="Retour aux réglages"
+            className="secondary-button mb-4"
+            href={`/tools/planning/referentiels?site=${site?.id ?? ''}`}
+          >
+            ← Retour aux réglages
+          </Link>
           <h1 className="text-3xl font-semibold tracking-tight">
             Groupes de collaborateurs
           </h1>
@@ -82,7 +92,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
           </p>
         </div>
         {organizationId && !params.add && !selectedGroup ? (
-          <Link className="primary-button" href="/tools/planning/groupes?add=1">
+          <Link className="primary-button" href={`${groupsHref}&add=1`}>
             Créer un groupe
           </Link>
         ) : null}
@@ -108,7 +118,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
             <h2 className="text-lg font-semibold">Créer un groupe</h2>
             <Link
               className="text-sm font-medium text-zinc-500 hover:text-zinc-950"
-              href="/tools/planning/groupes"
+              href={groupsHref}
             >
               Annuler et revenir à la liste
             </Link>
@@ -148,7 +158,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                 {members.length} collaborateur{members.length > 1 ? 's' : ''}
               </p>
             </div>
-            <Link className="secondary-button" href="/tools/planning/groupes">
+            <Link className="secondary-button" href={groupsHref}>
               ← Tous les groupes
             </Link>
           </div>
@@ -314,7 +324,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                 <h3 className="min-w-0 flex-1 font-semibold">{group.name}</h3>
                 <Link
                   className="secondary-button"
-                  href={`/tools/planning/groupes?group=${group.id}`}
+                  href={`${groupsHref}&group=${group.id}`}
                 >
                   Gérer les collaborateurs →
                 </Link>
