@@ -10,8 +10,13 @@ test('la connexion utilise un seul logo et le fond Corsica Linea fourni', async 
   assert.match(source, /Flotte Corsica Linea en mer/);
   assert.doesNotMatch(source, /CC BY-SA 4\.0/);
   assert.equal(source.match(/src="\/brand\/corsica-linea\.webp"/g)?.length, 1);
-  assert.match(source, /h-12 w-auto self-center object-contain/);
-  assert.match(source, /mt-8 text-center/);
+  assert.match(source, /data-login-logo/);
+  assert.match(source, /absolute left-4 top-4/);
+  assert.ok(
+    source.indexOf('src="/brand/corsica-linea.webp"') <
+      source.indexOf('</section>'),
+    'le logo doit rester dans la section de l’image',
+  );
 });
 
 test('la page reste centrée sur la connexion', async () => {
