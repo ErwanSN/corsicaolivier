@@ -106,6 +106,10 @@
   flex: 1 1 auto;
 }
 
+.toolbarActions {
+  flex: 0 0 auto;
+}
+
 .arrowButton,
 .todayButton,
 .menu > summary {
@@ -162,34 +166,17 @@
 }
 
 .versionStatus {
-  display: flex;
-  min-width: 12.5rem;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 0.55rem;
-}
-
-.versionStatus p {
-  display: grid;
+  display: inline-flex;
+  height: 2.55rem;
   min-width: 0;
-  gap: 0.05rem;
-}
-
-.versionStatus strong,
-.versionStatus span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.versionStatus strong {
+  align-items: center;
+  border: 1px solid #d4d4d8;
+  background: #f4f4f5;
+  padding: 0 0.7rem;
   color: #27272a;
   font-size: 0.7rem;
-}
-
-.versionStatus span {
-  color: #71717a;
-  font-size: 0.58rem;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
 .menu {
@@ -376,8 +363,9 @@
   }
 
   .toolbarActions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .versionStatus {

@@ -193,6 +193,8 @@ const planningCollisionDetection: CollisionDetection = (arguments_) => {
     : rectIntersection(arguments_);
 };
 
+const MIN_VISIBLE_POSITION_ROWS = 8;
+
 function pendingMoveOverride(
   assignment: ShiftAssignment,
   overrides: Readonly<Record<string, MoveOverride>>,
@@ -410,6 +412,10 @@ export function PlanningGrid({
     data.shiftById,
     timeZone,
   ]);
+  const showSearch =
+    planningSummary.activeAgents > 0 || data.assignments.length > 0;
+  const showStats =
+    planningSummary.activeAgents > 0 || planningSummary.missingAgentSlots > 0;
 
   useEffect(() => {
     if (normalizedAgentSearch.length < 2 || matchingAssignmentCount === 0) {
@@ -586,59 +592,66 @@ export function PlanningGrid({
 
   return (
     <div className={styles.planningArea}>
-      <section
-        aria-label="Pilotage du planning"
-        className={styles.commandBar}
-        data-print-hide
-      >
-        <div className={styles.agentSearch}>
-          <label
-            className={styles.visuallyHidden}
-            htmlFor="planning-agent-search"
-          >
-            Retrouver un collaborateur
-          </label>
-          <div className={styles.searchControl}>
-            <input
-              autoComplete="off"
-              id="planning-agent-search"
-              onChange={(event) => setAgentSearch(event.target.value)}
-              placeholder="Nom ou matricule"
-              type="search"
-              value={agentSearch}
-            />
-            {agentSearch ? (
-              <button onClick={() => setAgentSearch('')} type="button">
-                Effacer
-              </button>
-            ) : null}
-          </div>
-          {highlightedAgentIds ? (
-            <p aria-live="polite">
-              {matchingAssignmentCount} affectation
-              {matchingAssignmentCount > 1 ? 's' : ''}
-            </p>
+      {showSearch || showStats ? (
+        <section
+          aria-label="Pilotage du planning"
+          className={styles.commandBar}
+          data-print-hide
+        >
+          {showSearch ? (
+            <div className={styles.agentSearch}>
+              <label
+                className={styles.visuallyHidden}
+                htmlFor="planning-agent-search"
+              >
+                Retrouver un collaborateur
+              </label>
+              <div className={styles.searchControl}>
+                <input
+                  autoComplete="off"
+                  id="planning-agent-search"
+                  onChange={(event) => setAgentSearch(event.target.value)}
+                  placeholder="Rechercher un agent"
+                  type="search"
+                  value={agentSearch}
+                />
+                {agentSearch ? (
+                  <button onClick={() => setAgentSearch('')} type="button">
+                    Effacer
+                  </button>
+                ) : null}
+              </div>
+              {highlightedAgentIds ? (
+                <p aria-live="polite">
+                  {matchingAssignmentCount} affectation
+                  {matchingAssignmentCount > 1 ? 's' : ''}
+                </p>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-        <dl className={styles.planningStats}>
-          <div>
-            <dt>Agents planifiés</dt>
-            <dd>
-              {planningSummary.scheduledAgents}/{planningSummary.activeAgents}
-            </dd>
-          </div>
-          <div
-            className={
-              planningSummary.missingAgentSlots
-                ? styles.attentionStat
-                : undefined
-            }
-          >
-            <dt>Postes à couvrir</dt>
-            <dd>{planningSummary.missingAgentSlots}</dd>
-          </div>
-        </dl>
-      </section>
+          {showStats ? (
+            <dl className={styles.planningStats}>
+              <div>
+                <dt>Agents planifiés</dt>
+                <dd>
+                  {planningSummary.scheduledAgents}/
+                  {planningSummary.activeAgents}
+                </dd>
+              </div>
+              <div
+                className={
+                  planningSummary.missingAgentSlots
+                    ? styles.attentionStat
+                    : undefined
+                }
+              >
+                <dt>Postes à couvrir</dt>
+                <dd>{planningSummary.missingAgentSlots}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </section>
+      ) : null}
       {moveFeedback ? (
         <p
           className={
@@ -710,6 +723,10 @@ function WeeklyTable({
   const freightPositions = data.positions.filter((position) =>
     position.code.startsWith('FRET-'),
   );
+  const emptyRowCount = Math.max(
+    0,
+    MIN_VISIBLE_POSITION_ROWS - data.positions.length,
+  );
 
   return (
     <section aria-label="Planning de la semaine" className={styles.weekSheet}>
@@ -743,7 +760,6 @@ function WeeklyTable({
             position={position}
           />
         ))}
-        {!autoPositions.length ? <EmptyWeekRow days={days} /> : null}
         {freightPositions.length ? (
           <>
             <WeekSectionRow days={days} label="Fret" />
@@ -760,6 +776,13 @@ function WeeklyTable({
             ))}
           </>
         ) : null}
+        {Array.from({ length: emptyRowCount }, (_, index) => (
+          <EmptyWeekRow
+            days={days}
+            key={`empty-${index}`}
+            showHint={index === 0 && data.positions.length === 0}
+          />
+        ))}
       </div>
     </section>
   );
@@ -890,12 +913,28 @@ function WeekPositionRow({
   );
 }
 
-function EmptyWeekRow({ days }: Readonly<{ days: CalendarDay[] }>) {
+function EmptyWeekRow({
+  days,
+  showHint,
+}: Readonly<{ days: CalendarDay[]; showHint: boolean }>) {
   return (
-    <div className={styles.weekGrid} data-planning-week-row>
-      <div className={styles.positionLabel}>Postes à configurer</div>
+    <div
+      className={styles.weekGrid}
+      data-empty-planning-row
+      data-planning-week-row
+    >
+      <div
+        aria-hidden={!showHint}
+        className={`${styles.positionLabel} ${styles.emptyPositionLabel}`}
+      >
+        {showHint ? 'Postes à configurer' : null}
+      </div>
       {days.map((day) => (
-        <div className={styles.positionCell} key={day.date} />
+        <div
+          aria-hidden="true"
+          className={`${styles.positionCell} ${styles.emptyPositionCell}`}
+          key={day.date}
+        />
       ))}
     </div>
   );

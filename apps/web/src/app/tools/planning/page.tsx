@@ -60,17 +60,26 @@ function rangeLabel(range: WeeklyPlanningRange): string {
   return `${start} — ${end}`;
 }
 
-function publicationLabel(
-  publishedAt: string | null,
-  timeZone: string,
-): string {
-  if (!publishedAt) return 'précédemment';
+function compactRangeLabel(range: WeeklyPlanningRange): string {
+  const start = new Date(`${range.startsOn}T12:00:00.000Z`);
+  const end = new Date(`${range.endsOn}T12:00:00.000Z`);
+  const sameMonth =
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth();
+  const day = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+  const date = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone,
-  }).format(new Date(publishedAt));
+  return sameMonth
+    ? `${day.format(start)}–${date.format(end)}`
+    : `${date.format(start)} – ${date.format(end)}`;
 }
 
 export default async function PlanningPage({
@@ -219,7 +228,7 @@ export default async function PlanningPage({
             </a>
             <div className={styles.weekLabel}>
               <span>Semaine</span>
-              <strong>{rangeLabel(range)}</strong>
+              <strong>{compactRangeLabel(range)}</strong>
             </div>
             <a
               aria-label="Semaine suivante"
@@ -236,25 +245,15 @@ export default async function PlanningPage({
         </div>
 
         <div className={styles.toolbarActions}>
-          <div className={styles.versionStatus}>
-            <p>
+          {draftVersion || publishedVersion ? (
+            <p className={styles.versionStatus}>
               <strong>
                 {draftVersion
                   ? `Copie de travail v${draftVersion.version_number}`
-                  : publishedVersion
-                    ? `Version publiée v${publishedVersion.version_number}`
-                    : 'Aucune version'}
+                  : `Version publiée v${publishedVersion?.version_number}`}
               </strong>
-              <span>
-                {publishedVersion
-                  ? `Référence publiée ${publicationLabel(
-                      publishedVersion.published_at,
-                      site.timezone,
-                    )}`
-                  : 'Aucune publication pour cette période'}
-              </span>
             </p>
-          </div>
+          ) : null}
 
           {draftVersion ? (
             <details
@@ -317,7 +316,7 @@ export default async function PlanningPage({
           ) : null}
 
           <details className={styles.menu} name="planning-toolbar-menu">
-            <summary>Date et exports</summary>
+            <summary>Options</summary>
             <div className={styles.optionsPanel}>
               <form
                 action="/tools/planning"

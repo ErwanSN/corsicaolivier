@@ -130,7 +130,10 @@ test('le planning reprend le corpus dans une vue uniquement hebdomadaire', async
   assert.doesNotMatch(grid, /CalendarOverview|CalendarDayCard/);
   assert.match(grid, /kind="arrival"/);
   assert.match(grid, /kind="departure"/);
-  assert.match(styles, /grid-template-columns: 12rem repeat\(7,/);
+  assert.match(
+    styles,
+    /grid-template-columns: minmax\(8rem, 11rem\) repeat\(7,/,
+  );
   assert.match(ranges, /resolveWeeklyRange/);
   assert.doesNotMatch(ranges, /month|custom|MAX_CUSTOM_DAYS/);
 });
@@ -242,7 +245,7 @@ test('le planning reste pilotable avec une équipe de 120 collaborateurs', async
   );
 
   assert.match(grid, /Retrouver un collaborateur/);
-  assert.match(grid, /Nom ou matricule/);
+  assert.match(grid, /Rechercher un agent/);
   assert.match(grid, /highlightedAgentIds/);
   assert.match(grid, /matchingAssignmentCount/);
   assert.match(grid, /Agents planifiés/);
@@ -315,7 +318,7 @@ test('la page planning masque les commandes secondaires et le bruit nominal', as
   );
 
   assert.match(page, /aria-label="Commandes du planning"/);
-  assert.match(page, /<summary>Date et exports<\/summary>/);
+  assert.match(page, /<summary>Options<\/summary>/);
   assert.match(page, /<PlanningExportButton/);
   assert.match(page, /className=\{styles\.publishPanel\}/);
   assert.match(page, /name="planning-toolbar-menu"/);

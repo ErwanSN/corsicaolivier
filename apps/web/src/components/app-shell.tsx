@@ -20,17 +20,24 @@ const navigation = [
     label: 'Collaborateurs',
     mobileLabel: 'Équipe',
   },
-  { href: '/tools/planning/zones', label: 'Zones', mobileLabel: 'Zones' },
-  {
-    href: '/tools/planning/groupes',
-    label: 'Groupes',
-    mobileLabel: 'Groupes',
-  },
   { href: '/tools/planning/escales', label: 'Escales', mobileLabel: 'Escales' },
+  {
+    href: '/tools/planning/referentiels',
+    label: 'Réglages',
+    mobileLabel: 'Réglages',
+  },
 ] as const;
 
 function isCurrentPath(pathname: string, href: string): boolean {
   if (href === '/tools/planning') return pathname === href;
+  if (href === '/tools/planning/referentiels') {
+    return [
+      '/tools/planning/referentiels',
+      '/tools/planning/zones',
+      '/tools/planning/groupes',
+      '/tools/planning/besoins',
+    ].some((path) => pathname.startsWith(path));
+  }
   return pathname.startsWith(href);
 }
 
@@ -104,13 +111,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         </nav>
 
         <div className="border-t border-zinc-100 p-3">
-          <Link
-            className="flex h-10 items-center border-l-4 border-transparent px-3 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950"
-            href="/tools/planning/referentiels"
-          >
-            Réglages des postes
-          </Link>
-          <div className="mt-2 border border-zinc-200 bg-zinc-50 p-3">
+          <div className="border border-zinc-200 bg-zinc-50 p-3">
             <p className="truncate text-sm font-medium">{userLabel}</p>
             <form action={logout} className="mt-2">
               <LogoutButton />
@@ -163,7 +164,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
 
       <nav
         aria-label="Navigation mobile"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-zinc-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-zinc-200 bg-white px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden"
         data-app-shell-mobile-nav
       >
         {navigation.map((item) => {

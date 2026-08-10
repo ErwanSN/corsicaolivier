@@ -152,12 +152,13 @@
 .weekViewport {
   overflow: auto;
   max-height: calc(100svh - 8rem);
+  overscroll-behavior-inline: contain;
 }
 
 .weekGrid {
   display: grid;
-  grid-template-columns: 12rem repeat(7, minmax(10rem, 1fr));
-  min-width: 82rem;
+  grid-template-columns: minmax(8rem, 11rem) repeat(7, minmax(7.25rem, 1fr));
+  min-width: 64rem;
 }
 
 .cornerHeader,
@@ -313,7 +314,7 @@
 
 .positionLabel {
   display: flex;
-  min-height: 3.25rem;
+  min-height: 4.25rem;
   align-items: center;
   padding: 0.55rem 0.75rem;
   background: #c0c0c0;
@@ -323,11 +324,21 @@
 
 .positionCell {
   position: relative;
-  min-height: 3.25rem;
+  min-height: 4.25rem;
   padding: 0.4rem;
   border-right: 1px solid #c0c0c0;
   border-bottom: 1px solid #c0c0c0;
   background: #ffffff;
+}
+
+.emptyPositionLabel,
+.emptyPositionCell {
+  background: #fafafa;
+}
+
+.emptyPositionLabel {
+  color: #71717a;
+  font-weight: 600;
 }
 
 .addAssignment {
@@ -516,6 +527,22 @@
 
   .weekViewport {
     max-height: none;
+  }
+
+  .weekGrid {
+    grid-template-columns: 7.25rem repeat(7, 7.25rem);
+    min-width: 58rem;
+  }
+
+  .cornerHeader,
+  .dayColumnHeader {
+    min-height: 3.25rem;
+    padding: 0.45rem;
+  }
+
+  .positionLabel,
+  .positionCell {
+    min-height: 4rem;
   }
 }
 

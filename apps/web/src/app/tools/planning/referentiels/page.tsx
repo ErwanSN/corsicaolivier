@@ -102,6 +102,24 @@ export default async function ReferentielsPage({
         </details>
       </header>
 
+      <nav
+        aria-label="Autres réglages"
+        className="flex flex-wrap gap-2 border border-zinc-200 bg-white p-3"
+      >
+        <Link className="secondary-button" href="/tools/planning/zones">
+          Zones
+        </Link>
+        <Link className="secondary-button" href="/tools/planning/groupes">
+          Groupes
+        </Link>
+        <Link
+          className="secondary-button"
+          href={`/tools/planning/besoins?site=${site?.id ?? ''}`}
+        >
+          Règles de besoins
+        </Link>
+      </nav>
+
       {site ? (
         <SiteSwitcher
           path="/tools/planning/referentiels"
