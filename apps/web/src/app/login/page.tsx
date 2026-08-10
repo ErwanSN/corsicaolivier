@@ -16,35 +16,13 @@ export default async function LoginPage() {
     <main className="grid min-h-svh bg-white lg:grid-cols-[minmax(0,1.2fr)_minmax(28rem,0.8fr)]">
       <section className="relative min-h-52 overflow-hidden bg-zinc-900 sm:min-h-72 lg:min-h-full">
         <Image
-          alt="A Galeotta, navire Corsica Linea à quai à Marseille"
+          alt="Flotte Corsica Linea en mer"
           className="object-cover object-center"
           fill
           priority
           sizes="(min-width: 1024px) 60vw, 100vw"
-          src="/brand/corsica-linea-a-galeotta.webp"
+          src="/brand/corsica-linea-background.webp"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-        <p className="absolute bottom-3 left-4 z-10 text-[10px] leading-4 text-white/80">
-          Photo :{' '}
-          <a
-            className="underline decoration-white/50 underline-offset-2 hover:text-white"
-            href="https://commons.wikimedia.org/wiki/File:A_Galeotta_Inauguration_1746_w.jpg"
-            rel="noreferrer"
-            target="_blank"
-          >
-            J.-Y. Delattre / Gomet&apos;
-          </a>{' '}
-          ·{' '}
-          <a
-            className="underline decoration-white/50 underline-offset-2 hover:text-white"
-            href="https://creativecommons.org/licenses/by-sa/4.0/"
-            rel="noreferrer"
-            target="_blank"
-          >
-            CC BY-SA 4.0
-          </a>{' '}
-          · image optimisée
-        </p>
       </section>
 
       <section className="flex px-6 py-10 sm:px-10 lg:px-16 lg:py-12">
