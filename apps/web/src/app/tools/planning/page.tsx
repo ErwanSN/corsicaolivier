@@ -120,6 +120,7 @@ export default async function PlanningPage({
   ]);
   const periods = periodsResult.data ?? [];
   const range = resolveWeeklyRange(params.date, today);
+  const isCurrentWeek = today >= range.startsOn && today <= range.endsOn;
   const visiblePeriods = periods.filter(
     (period) =>
       period.starts_on <= range.endsOn && period.ends_on >= range.startsOn,
@@ -193,24 +194,29 @@ export default async function PlanningPage({
         className={styles.toolbar}
         data-print-hide
       >
-        <div className={styles.toolbarNavigation}>
+        <div className={styles.toolbarPrimary}>
           {sites.length > 1 ? (
-            <nav aria-label="Zones" className={styles.zoneTabs}>
-              {sites.map((item) => (
-                <Link
-                  aria-current={item.id === site.id ? 'page' : undefined}
-                  className={
-                    item.id === site.id ? styles.activeZone : styles.zoneTab
-                  }
-                  href={weekHref(item.id, range.startsOn)}
-                  key={item.id}
-                >
-                  {item.name.replace('Marseille ', '')}
-                </Link>
-              ))}
-            </nav>
+            <details className={`${styles.menu} ${styles.siteMenu}`}>
+              <summary>{site.name.replace('Marseille ', '')}</summary>
+              <nav aria-label="Changer de site" className={styles.sitePanel}>
+                {sites.map((item) => (
+                  <Link
+                    aria-current={item.id === site.id ? 'page' : undefined}
+                    className={
+                      item.id === site.id
+                        ? styles.activeSiteLink
+                        : styles.siteLink
+                    }
+                    href={weekHref(item.id, range.startsOn)}
+                    key={item.id}
+                  >
+                    {item.name.replace('Marseille ', '')}
+                  </Link>
+                ))}
+              </nav>
+            </details>
           ) : (
-            <p className={styles.singleZone}>
+            <p className={styles.siteLabel}>
               {site.name.replace('Marseille ', '')}
             </p>
           )}
@@ -227,7 +233,6 @@ export default async function PlanningPage({
               ←
             </a>
             <div className={styles.weekLabel}>
-              <span>Semaine</span>
               <strong>{compactRangeLabel(range)}</strong>
             </div>
             <a
@@ -238,32 +243,28 @@ export default async function PlanningPage({
             >
               →
             </a>
-            <a className={styles.todayButton} href={weekHref(site.id, today)}>
-              Aujourd’hui
-            </a>
+            {!isCurrentWeek ? (
+              <a className={styles.todayButton} href={weekHref(site.id, today)}>
+                <span className={styles.todayLong}>Aujourd’hui</span>
+                <span className={styles.todayShort}>Auj.</span>
+              </a>
+            ) : null}
           </nav>
         </div>
 
-        <div className={styles.toolbarActions}>
-          {draftVersion || publishedVersion ? (
-            <p className={styles.versionStatus}>
-              <strong>
+        <details className={`${styles.menu} ${styles.actionsMenu}`}>
+          <summary>Actions</summary>
+          <div className={styles.actionsPanel}>
+            {draftVersion || publishedVersion ? (
+              <p className={styles.versionStatus}>
                 {draftVersion
                   ? `Copie de travail v${draftVersion.version_number}`
                   : `Version publiée v${publishedVersion?.version_number}`}
-              </strong>
-            </p>
-          ) : null}
+              </p>
+            ) : null}
 
-          {draftVersion ? (
-            <details
-              className={`${styles.menu} ${styles.publishMenu}`}
-              name="planning-toolbar-menu"
-            >
-              <summary>
-                {publishedVersion ? 'Publier' : 'Première publication'}
-              </summary>
-              <div className={styles.publishPanel}>
+            {draftVersion ? (
+              <section className={styles.publishSection}>
                 <p className={styles.panelTitle}>
                   {publishedVersion
                     ? 'Publier les modifications'
@@ -311,66 +312,61 @@ export default async function PlanningPage({
                       : 'Confirmer la publication'}
                   </button>
                 </form>
+              </section>
+            ) : null}
+
+            <form
+              action="/tools/planning"
+              className={styles.dateForm}
+              method="get"
+            >
+              <input name="site" type="hidden" value={site.id} />
+              <label htmlFor="week-date">Aller à une date</label>
+              <div>
+                <input
+                  defaultValue={range.startsOn}
+                  id="week-date"
+                  name="date"
+                  type="date"
+                />
+                <button className="secondary-button" type="submit">
+                  Afficher
+                </button>
               </div>
-            </details>
-          ) : null}
+            </form>
 
-          <details className={styles.menu} name="planning-toolbar-menu">
-            <summary>Options</summary>
-            <div className={styles.optionsPanel}>
-              <form
-                action="/tools/planning"
-                className={styles.dateForm}
-                method="get"
-              >
-                <input name="site" type="hidden" value={site.id} />
-                <label htmlFor="week-date">Aller à une date</label>
-                <div>
-                  <input
-                    defaultValue={range.startsOn}
-                    id="week-date"
-                    name="date"
-                    type="date"
-                  />
-                  <button className="secondary-button" type="submit">
-                    Afficher
-                  </button>
-                </div>
-              </form>
-
-              <div className={styles.exportGroup}>
-                <p className={styles.panelTitle}>Exporter</p>
-                <div className={styles.exportActions}>
-                  <PlanningExportButton
-                    draftVersionNumber={draftVersion?.version_number}
-                    siteName={site.name}
-                    weekStart={range.startsOn}
-                  />
-                  {activeVersionId ? (
-                    <a
-                      className="secondary-button"
-                      download
-                      href={`/tools/planning/export/${activeVersionId}`}
-                    >
-                      {draftVersion
-                        ? 'Exporter le brouillon en Excel'
-                        : 'Exporter en Excel'}
-                    </a>
-                  ) : null}
-                  {draftVersion && publishedVersion ? (
-                    <a
-                      className="secondary-button"
-                      download
-                      href={`/tools/planning/export/${publishedVersion.id}`}
-                    >
-                      Exporter la version publiée en Excel
-                    </a>
-                  ) : null}
-                </div>
+            <div className={styles.exportGroup}>
+              <p className={styles.panelTitle}>Exporter</p>
+              <div className={styles.exportActions}>
+                <PlanningExportButton
+                  draftVersionNumber={draftVersion?.version_number}
+                  siteName={site.name}
+                  weekStart={range.startsOn}
+                />
+                {activeVersionId ? (
+                  <a
+                    className="secondary-button"
+                    download
+                    href={`/tools/planning/export/${activeVersionId}`}
+                  >
+                    {draftVersion
+                      ? 'Exporter le brouillon en Excel'
+                      : 'Exporter en Excel'}
+                  </a>
+                ) : null}
+                {draftVersion && publishedVersion ? (
+                  <a
+                    className="secondary-button"
+                    download
+                    href={`/tools/planning/export/${publishedVersion.id}`}
+                  >
+                    Exporter la version publiée en Excel
+                  </a>
+                ) : null}
               </div>
             </div>
-          </details>
-        </div>
+          </div>
+        </details>
       </section>
       {params.saved === 'published' ? (
         <p

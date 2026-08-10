@@ -9,14 +9,31 @@ test('la navigation principale reste limitée aux parcours utiles', async () => 
     'utf8',
   );
 
-  assert.match(shell, /grid-cols-4/);
-  assert.doesNotMatch(shell, /grid-cols-5/);
-  assert.match(shell, /mobileLabel: 'Équipe'/);
-  assert.match(shell, /mobileLabel: 'Réglages'/);
+  assert.match(shell, /<summary[^>]*>\s*Menu\s*<\/summary>/);
+  assert.match(shell, /aria-label="Navigation principale"/);
+  assert.doesNotMatch(shell, /data-app-shell-sidebar/);
+  assert.doesNotMatch(shell, /data-app-shell-mobile-nav/);
+  assert.doesNotMatch(shell, /mobileLabel/);
   assert.match(settings, /aria-label="Autres réglages"/);
   assert.match(settings, />\s*Zones\s*</);
   assert.match(settings, />\s*Groupes\s*</);
   assert.match(settings, />\s*Règles de besoins\s*</);
+});
+
+test('les commandes du planning tiennent dans une seule barre compacte', async () => {
+  const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
+  const styles = await readFile(
+    'src/app/tools/planning/planning-page.module.css',
+    'utf8',
+  );
+
+  assert.match(page, /<summary>Actions<\/summary>/);
+  assert.match(page, /aria-label="Changer de site"/);
+  assert.match(page, /isCurrentWeek \?/);
+  assert.doesNotMatch(page, /styles\.zoneTabs/);
+  assert.doesNotMatch(page, /styles\.toolbarActions/);
+  assert.doesNotMatch(page, /styles\.publishMenu/);
+  assert.match(styles, /min-height: 3\.1rem/);
 });
 
 test('la grille conserve huit lignes et les remplace avec les postes saisis', async () => {

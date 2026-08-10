@@ -318,12 +318,11 @@ test('la page planning masque les commandes secondaires et le bruit nominal', as
   );
 
   assert.match(page, /aria-label="Commandes du planning"/);
-  assert.match(page, /<summary>Options<\/summary>/);
+  assert.match(page, /<summary>Actions<\/summary>/);
   assert.match(page, /<PlanningExportButton/);
-  assert.match(page, /className=\{styles\.publishPanel\}/);
-  assert.match(page, /name="planning-toolbar-menu"/);
-  assert.match(pageStyles, /max-height: min\(34rem,/);
-  assert.match(pageStyles, /@media \(max-width: 1023px\)/);
+  assert.match(page, /className=\{styles\.actionsPanel\}/);
+  assert.match(pageStyles, /max-height: min\(36rem,/);
+  assert.match(pageStyles, /@media \(max-width: 767px\)/);
   assert.match(page, /data-print-hide[\s\S]{0,80}role="status"/);
   assert.match(page, /data-print-hide[\s\S]{0,80}role="alert"/);
   assert.doesNotMatch(page, /<aside/);
