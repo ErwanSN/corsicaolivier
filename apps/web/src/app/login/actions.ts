@@ -12,22 +12,34 @@ export async function login(
   _previousState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = formData.get('email');
+  const emailValue = formData.get('email');
   const password = formData.get('password');
-  const supabase = await createSupabaseServerClient();
 
-  if (!supabase) {
-    return { error: 'Supabase n’est pas configuré pour cet environnement.' };
-  }
-
-  if (typeof email !== 'string' || typeof password !== 'string') {
+  if (typeof emailValue !== 'string' || typeof password !== 'string') {
     return { error: 'Les identifiants sont incomplets.' };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const email = emailValue.trim().toLowerCase();
+  if (!email || !password) {
+    return { error: 'Les identifiants sont incomplets.' };
+  }
 
-  if (error) {
-    return { error: 'Adresse e-mail ou mot de passe incorrect.' };
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return { error: 'Le service de connexion n’est pas configuré.' };
+  }
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { error: 'E-mail ou mot de passe incorrect.' };
+    }
+  } catch {
+    return { error: 'Le service de connexion est momentanément indisponible.' };
   }
 
   redirect('/tools');

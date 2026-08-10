@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { glob } from 'node:fs/promises';
 import test from 'node:test';
 
+import { sourceFiles } from './helpers/source-files.mjs';
+
 test('la source React ne contient aucune prop style', async () => {
-  for await (const path of glob('src/**/*.{tsx,jsx}')) {
+  for await (const path of sourceFiles('src', ['.tsx', '.jsx'])) {
     const source = await readFile(path, 'utf8');
 
     assert.doesNotMatch(

@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
-import { glob, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+
+import { sourceFiles } from './helpers/source-files.mjs';
 
 test('tous les dropdowns utilisent le composant de la plateforme', async () => {
   const rawSelects = [];
   let platformSelectCount = 0;
 
-  for await (const path of glob('src/**/*.tsx')) {
+  for await (const path of sourceFiles('src', ['.tsx'])) {
     const source = await readFile(path, 'utf8');
     const normalizedPath = path.replaceAll('\\', '/');
 
