@@ -6,8 +6,6 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 
-import { logout } from '../app/login/actions';
-
 type AppShellProps = Readonly<{
   children: ReactNode;
   userLabel: string;
@@ -113,7 +111,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         <div className="border-t border-zinc-100 p-3">
           <div className="border border-zinc-200 bg-zinc-50 p-3">
             <p className="truncate text-sm font-medium">{userLabel}</p>
-            <form action={logout} className="mt-2">
+            <form action="/logout" className="mt-2" method="post">
               <LogoutButton />
             </form>
           </div>
@@ -146,7 +144,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
             <p className="hidden max-w-40 truncate text-sm text-zinc-500 sm:block">
               {userLabel}
             </p>
-            <form action={logout}>
+            <form action="/logout" method="post">
               <LogoutButton compact />
             </form>
           </div>
