@@ -8,7 +8,8 @@ test('la déconnexion nettoie la session et revient toujours à la connexion', a
   assert.match(route, /export async function POST/);
   assert.match(route, /signOut\(\{ scope: 'global' \}\)/);
   assert.match(route, /signOut\(\{ scope: 'local' \}\)/);
-  assert.match(route, /new URL\('\/login', request\.url\), 303/);
+  assert.match(route, /status: 303/);
+  assert.match(route, /Location: '\/login'/);
 });
 
 test('la déconnexion est disponible sur desktop et mobile avec un état d’attente', async () => {

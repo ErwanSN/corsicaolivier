@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 
-export async function POST(request: Request) {
+export async function POST() {
   const supabase = await createSupabaseServerClient();
 
   if (supabase) {
@@ -21,5 +21,8 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL('/login', request.url), 303);
+  return new NextResponse(null, {
+    status: 303,
+    headers: { Location: '/login' },
+  });
 }
