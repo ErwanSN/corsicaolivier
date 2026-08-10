@@ -6,16 +6,17 @@ test('la connexion utilise un seul logo et le fond Corsica Linea fourni', async 
   const source = await readFile('src/app/login/page.tsx', 'utf8');
 
   await access('public/brand/corsica-linea-background.webp');
+  await access('public/brand/corsica-linea-head.webp');
   assert.match(source, /src="\/brand\/corsica-linea-background\.webp"/);
   assert.match(source, /Flotte Corsica Linea en mer/);
   assert.doesNotMatch(source, /CC BY-SA 4\.0/);
-  assert.equal(source.match(/src="\/brand\/corsica-linea\.webp"/g)?.length, 1);
-  assert.match(source, /data-login-logo/);
-  assert.match(source, /absolute left-4 top-4/);
+  assert.doesNotMatch(source, /src="\/brand\/corsica-linea\.webp"/);
+  assert.match(source, /src="\/brand\/corsica-linea-head\.webp"/);
+  assert.match(source, /Tête corse Corsica Linea/);
   assert.ok(
-    source.indexOf('src="/brand/corsica-linea.webp"') <
+    source.indexOf('src="/brand/corsica-linea-head.webp"') >
       source.indexOf('</section>'),
-    'le logo doit rester dans la section de l’image',
+    'la tête corse doit être placée dans le bloc de connexion',
   );
 });
 
@@ -25,6 +26,7 @@ test('la page reste centrée sur la connexion', async () => {
 
   assert.match(source, />\s*Connexion\s*</);
   assert.match(form, /Se connecter/);
+  assert.match(form, /placeholder="Votre mot de passe"/);
   assert.doesNotMatch(source, /Tools Panel/i);
   assert.doesNotMatch(source, /Tous vos outils métier/);
   assert.doesNotMatch(source, /\.env\.example/);

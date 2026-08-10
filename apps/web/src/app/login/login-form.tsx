@@ -43,6 +43,7 @@ export function LoginForm() {
           disabled={pending}
           id="password"
           name="password"
+          placeholder="Votre mot de passe"
           required
           type="password"
         />
