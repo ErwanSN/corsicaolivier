@@ -9,14 +9,17 @@ export type PlanningExportData = Readonly<{
   agents: Row<'agents'>[];
   assignments: Row<'shift_assignments'>[];
   forecasts: Row<'call_load_forecasts'>[];
-  period: Row<'planning_periods'>;
+  period: Pick<
+    Row<'planning_periods'>,
+    'id' | 'name' | 'starts_on' | 'ends_on' | 'timezone'
+  >;
   portCalls: Row<'port_calls'>[];
   positions: Row<'positions'>[];
   requirements: Row<'staffing_requirements'>[];
   shifts: Row<'planning_shifts'>[];
   siteName: string;
   vessels: Row<'vessels'>[];
-  version: Row<'schedule_versions'>;
+  version: Pick<Row<'schedule_versions'>, 'label'>;
 }>;
 
 export type PlanningExportFile = Readonly<{
@@ -40,7 +43,7 @@ export async function buildPlanningWorkbook(
   data: PlanningExportData,
 ): Promise<PlanningExportFile> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Corsica Linea Tools Panel';
+  workbook.creator = 'Corsica Linea';
   workbook.created = new Date();
   workbook.modified = new Date();
   workbook.subject = `Planning ${data.period.name}`;
@@ -122,8 +125,7 @@ export async function buildPlanningWorkbook(
   sheet.autoFilter = { from: 'A2', to: 'H2' };
   sheet.pageSetup.printArea = `A1:H${lastRow}`;
   sheet.pageSetup.printTitlesRow = '1:2';
-  sheet.headerFooter.oddFooter =
-    '&LCorsica Linea Tools Panel&CPage &P / &N&RExport du &D';
+  sheet.headerFooter.oddFooter = '&LCorsica Linea&CPage &P / &N&RExport du &D';
 
   const raw = await workbook.xlsx.writeBuffer();
   return {

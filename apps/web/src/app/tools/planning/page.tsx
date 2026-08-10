@@ -171,6 +171,12 @@ export default async function PlanningPage({
     (version) => version.status === 'published',
   );
   const activeVersionId = activeBundle?.content?.version.id;
+  const excelExportHref = activeVersionId
+    ? `/tools/planning/export/${activeVersionId}`
+    : `/tools/planning/export/week?${new URLSearchParams({
+        date: range.startsOn,
+        site: site.id,
+      }).toString()}`;
   const hasError = Boolean(
     sitesResult.error ||
     agentsResult.error ||
@@ -338,17 +344,11 @@ export default async function PlanningPage({
             <div className={styles.exportGroup}>
               <p className={styles.panelTitle}>Exporter</p>
               <div className={styles.exportActions}>
-                {activeVersionId ? (
-                  <a
-                    className="secondary-button"
-                    download
-                    href={`/tools/planning/export/${activeVersionId}`}
-                  >
-                    {draftVersion
-                      ? 'Télécharger le brouillon en Excel'
-                      : 'Télécharger le tableau en Excel'}
-                  </a>
-                ) : null}
+                <a className="secondary-button" download href={excelExportHref}>
+                  {draftVersion
+                    ? 'Télécharger le brouillon en Excel'
+                    : 'Télécharger le tableau en Excel'}
+                </a>
                 <PlanningExportButton
                   draftVersionNumber={draftVersion?.version_number}
                   siteName={site.name}

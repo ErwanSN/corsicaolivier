@@ -19,6 +19,7 @@ import { requireAuth } from '../common/require-auth';
 import {
   ApproveReplanningScenarioDto,
   CreatePlanningShiftDto,
+  ExportPlanningWeekQuery,
   ListPlanningPeriodsQuery,
   ListReplanningScenariosQuery,
   ListScheduleVersionsQuery,
@@ -74,6 +75,28 @@ export class PlanningController {
     const file = await this.planning.exportSchedule(
       requireAuth(auth).accessToken,
       scheduleVersionId,
+    );
+
+    void reply
+      .header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      )
+      .header('Content-Disposition', `attachment; filename="${file.fileName}"`)
+      .header('Cache-Control', 'private, no-store')
+      .send(file.buffer);
+  }
+
+  @Get('planning/export.xlsx')
+  async exportWeek(
+    @CurrentAuth() auth: AuthIdentity | undefined,
+    @Query() query: ExportPlanningWeekQuery,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const file = await this.planning.exportWeek(
+      requireAuth(auth).accessToken,
+      query.siteId,
+      query.weekStart,
     );
 
     void reply

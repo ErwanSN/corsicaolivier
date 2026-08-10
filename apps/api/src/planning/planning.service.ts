@@ -13,11 +13,20 @@ import type {
 } from './planning.dto';
 import {
   buildPlanningWorkbook,
+  type PlanningExportData,
   type PlanningExportFile,
 } from './planning-export';
 
 type PlanningPeriod = Database['public']['Tables']['planning_periods']['Row'];
 type ScheduleVersion = Database['public']['Tables']['schedule_versions']['Row'];
+
+const EMPTY_EXPORT_ID = '00000000-0000-4000-8000-000000000000';
+
+function addDays(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
 
 @Injectable()
 export class PlanningService {
@@ -119,27 +128,115 @@ export class PlanningService {
     scheduleVersionId: string,
   ): Promise<PlanningExportFile> {
     const content = await this.getSchedule(accessToken, scheduleVersionId);
+
+    return this.buildExport(accessToken, {
+      assignments: content.assignments,
+      organizationId: content.version.organization_id,
+      period: content.period,
+      shifts: content.shifts,
+      siteId: content.version.site_id,
+      version: content.version,
+    });
+  }
+
+  async exportWeek(
+    accessToken: string,
+    siteId: string,
+    weekStart: string,
+  ): Promise<PlanningExportFile> {
+    const client = this.supabase.forUser(accessToken);
+    const weekEnd = addDays(weekStart, 6);
+    const [siteResult, periodsResult] = await Promise.all([
+      client.from('sites').select('*').eq('id', siteId).single(),
+      client
+        .from('planning_periods')
+        .select('*')
+        .eq('site_id', siteId)
+        .lte('starts_on', weekEnd)
+        .gte('ends_on', weekStart)
+        .order('starts_on', { ascending: false })
+        .limit(1),
+    ]);
+
+    throwForSupabaseError(siteResult.error, 'chargement du site pour export');
+    throwForSupabaseError(
+      periodsResult.error,
+      'chargement de la période pour export',
+    );
+
+    const site = this.requireData(
+      siteResult.data,
+      'Site chargé sans réponse pour export.',
+    );
+    const period = periodsResult.data?.at(0);
+
+    if (period) {
+      const versionsResult = await client
+        .from('schedule_versions')
+        .select('*')
+        .eq('planning_period_id', period.id)
+        .order('version_number', { ascending: false });
+
+      throwForSupabaseError(
+        versionsResult.error,
+        'chargement des versions pour export',
+      );
+      const versions = versionsResult.data ?? [];
+      const version =
+        versions.find((item) => item.status === 'draft') ??
+        versions.find((item) => item.status === 'published') ??
+        versions.at(0);
+
+      if (version) return this.exportSchedule(accessToken, version.id);
+    }
+
+    const exportPeriod: PlanningExportData['period'] = period ?? {
+      ends_on: weekEnd,
+      id: EMPTY_EXPORT_ID,
+      name: `Semaine du ${weekStart}`,
+      starts_on: weekStart,
+      timezone: site.timezone,
+    };
+
+    return this.buildExport(accessToken, {
+      assignments: [],
+      organizationId: site.organization_id,
+      period: exportPeriod,
+      shifts: [],
+      siteId,
+      version: { label: 'Tableau affiché' },
+    });
+  }
+
+  private async buildExport(
+    accessToken: string,
+    context: Pick<
+      PlanningExportData,
+      'assignments' | 'period' | 'shifts' | 'version'
+    > &
+      Readonly<{ organizationId: string; siteId: string }>,
+  ): Promise<PlanningExportFile> {
     const client = this.supabase.forUser(accessToken);
     const [agents, positions, portCalls, vessels, requirements, site] =
       await Promise.all([
         client
           .from('agents')
           .select('*')
-          .eq('organization_id', content.version.organization_id)
-          .eq('primary_site_id', content.version.site_id)
+          .eq('organization_id', context.organizationId)
+          .eq('primary_site_id', context.siteId)
           .order('display_name')
           .limit(500),
         client
           .from('positions')
           .select('*')
-          .eq('organization_id', content.version.organization_id)
-          .or(`site_id.is.null,site_id.eq.${content.version.site_id}`)
+          .eq('organization_id', context.organizationId)
+          .or(`site_id.is.null,site_id.eq.${context.siteId}`)
           .order('code')
           .limit(250),
         client
           .from('port_calls')
           .select('*')
-          .eq('site_id', content.version.site_id)
+          .eq('site_id', context.siteId)
           .order('scheduled_arrival_at', {
             ascending: false,
             nullsFirst: false,
@@ -148,18 +245,14 @@ export class PlanningService {
         client
           .from('vessels')
           .select('*')
-          .eq('organization_id', content.version.organization_id)
+          .eq('organization_id', context.organizationId)
           .order('name'),
         client
           .from('staffing_requirements')
           .select('*')
-          .eq('planning_period_id', content.period.id)
+          .eq('planning_period_id', context.period.id)
           .order('starts_at'),
-        client
-          .from('sites')
-          .select('*')
-          .eq('id', content.version.site_id)
-          .single(),
+        client.from('sites').select('*').eq('id', context.siteId).single(),
       ]);
 
     throwForSupabaseError(agents.error, 'chargement des agents pour export');
@@ -192,16 +285,16 @@ export class PlanningService {
 
     return buildPlanningWorkbook({
       agents: agents.data ?? [],
-      assignments: content.assignments,
+      assignments: context.assignments,
       forecasts: forecasts.data ?? [],
-      period: content.period,
+      period: context.period,
       portCalls: portCalls.data ?? [],
       positions: positions.data ?? [],
       requirements: requirements.data ?? [],
-      shifts: content.shifts,
+      shifts: context.shifts,
       siteName: site.data?.name ?? 'Corsica Linea',
       vessels: vessels.data ?? [],
-      version: content.version,
+      version: context.version,
     });
   }
 

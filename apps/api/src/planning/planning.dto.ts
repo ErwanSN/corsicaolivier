@@ -19,6 +19,14 @@ export class ListScheduleVersionsQuery {
   declare planningPeriodId: string;
 }
 
+export class ExportPlanningWeekQuery {
+  @IsUUID()
+  declare siteId: string;
+
+  @IsDateString({ strict: true })
+  declare weekStart: string;
+}
+
 export class CreatePlanningShiftDto {
   @IsUUID()
   declare agentId: string;

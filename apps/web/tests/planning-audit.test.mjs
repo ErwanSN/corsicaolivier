@@ -404,8 +404,20 @@ test('le planning utilise la palette native du corpus Excel', async () => {
 
 test('une version de planning peut être téléchargée en Excel', async () => {
   const planning = await readFile('src/app/tools/planning/page.tsx', 'utf8');
-  const route = await readFile(
+  const versionRoute = await readFile(
     'src/app/tools/planning/export/[id]/route.ts',
+    'utf8',
+  );
+  const weekRoute = await readFile(
+    'src/app/tools/planning/export/week/route.ts',
+    'utf8',
+  );
+  const response = await readFile(
+    'src/app/tools/planning/export/export-response.ts',
+    'utf8',
+  );
+  const controller = await readFile(
+    '../api/src/planning/planning.controller.ts',
     'utf8',
   );
 
@@ -415,9 +427,13 @@ test('une version de planning peut être téléchargée en Excel', async () => {
       planning.indexOf('<PlanningExportButton'),
   );
   assert.match(planning, /activeVersionId/);
-  assert.match(route, /export\.xlsx/);
+  assert.match(planning, /excelExportHref/);
+  assert.match(planning, /export\/week/);
+  assert.match(versionRoute, /proxyPlanningExport/);
+  assert.match(weekRoute, /planning\/export\.xlsx/);
+  assert.match(controller, /@Get\('planning\/export\.xlsx'\)/);
   assert.match(
-    route,
+    response,
     /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/,
   );
 });

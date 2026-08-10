@@ -77,6 +77,7 @@ describe('buildPlanningWorkbook', () => {
     const sheet = workbook.getWorksheet('Planning semaine');
 
     expect(sheet).toBeDefined();
+    expect(workbook.creator).toBe('Corsica Linea');
     expect(file.fileName).toBe('planning-2026-07-20-planning-initial.xlsx');
     expect(sheet?.getCell('B3').value).toContain('Pascal Paoli');
     expect(sheet?.getCell('B5').value).toContain('570 pax');
@@ -84,6 +85,7 @@ describe('buildPlanningWorkbook', () => {
     expect(fillColor(sheet?.getCell('G2'))).toBe('FFFFFF00');
     expect(fillColor(sheet?.getCell('B7'))).toBe('FF99CC00');
     expect(fillColor(sheet?.getCell('A8'))).toBe('FF969696');
+    expect(sheet?.headerFooter.oddFooter).not.toContain('Tools Panel');
   });
 });
 
