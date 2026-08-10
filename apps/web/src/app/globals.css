@@ -104,9 +104,15 @@
     print-color-adjust: exact;
   }
 
+  [data-app-shell-sidebar],
   [data-app-shell-header],
+  [data-app-shell-mobile-nav],
   [data-print-hide] {
     display: none !important;
+  }
+
+  [data-app-shell-content] {
+    padding-left: 0 !important;
   }
 
   [data-app-shell-main] {

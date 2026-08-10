@@ -11,12 +11,11 @@ test('la déconnexion nettoie la session et revient toujours à la connexion', a
   assert.match(actions, /redirect\('\/login'\)/);
 });
 
-test('la déconnexion reste disponible dans le menu avec un état d’attente', async () => {
+test('la déconnexion est disponible sur desktop et mobile avec un état d’attente', async () => {
   const shell = await readFile('src/components/app-shell.tsx', 'utf8');
 
-  assert.equal(shell.match(/<form action=\{logout\}/g)?.length, 1);
+  assert.equal(shell.match(/<form action=\{logout\}/g)?.length, 2);
   assert.match(shell, /useFormStatus/);
   assert.match(shell, /Déconnexion…/);
-  assert.match(shell, /<summary[^>]*>\s*Menu\s*<\/summary>/);
-  assert.match(shell, /<LogoutButton \/>/);
+  assert.match(shell, /<LogoutButton compact \/>/);
 });

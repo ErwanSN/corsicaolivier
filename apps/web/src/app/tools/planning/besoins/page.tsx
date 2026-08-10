@@ -71,6 +71,13 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
         <div>
+          <Link
+            aria-label="Retour aux réglages"
+            className="secondary-button mb-4"
+            href={`/tools/planning/referentiels?site=${site?.id ?? ''}`}
+          >
+            ← Retour aux réglages
+          </Link>
           <h1 className="text-3xl font-semibold tracking-tight">
             Profils et besoins opérationnels
           </h1>

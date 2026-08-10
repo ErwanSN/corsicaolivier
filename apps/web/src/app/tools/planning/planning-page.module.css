@@ -28,7 +28,7 @@
 
 .toolbar {
   position: sticky;
-  top: 3.5rem;
+  top: 0;
   z-index: 50;
   display: flex;
   min-height: 3.1rem;
@@ -313,6 +313,12 @@
 
 .todayShort {
   display: none;
+}
+
+@media (max-width: 1023px) {
+  .toolbar {
+    top: 4rem;
+  }
 }
 
 @media (max-width: 767px) {
