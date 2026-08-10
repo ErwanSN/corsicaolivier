@@ -18,6 +18,7 @@ test('la page reste centrée sur la connexion', async () => {
 
   assert.match(source, />\s*Connexion\s*</);
   assert.match(form, /Se connecter/);
+  assert.doesNotMatch(source, /Tools Panel/i);
   assert.doesNotMatch(source, /Tous vos outils métier/);
   assert.doesNotMatch(source, /\.env\.example/);
 });

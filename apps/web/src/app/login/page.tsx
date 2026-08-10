@@ -58,8 +58,7 @@ export default async function LoginPage() {
           />
 
           <header className="mt-12">
-            <p className="eyebrow">Tools Panel</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-950">
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">
               Connexion
             </h1>
             <p className="mt-3 text-sm leading-6 text-zinc-600">

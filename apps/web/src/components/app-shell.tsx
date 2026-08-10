@@ -37,7 +37,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
   const pathname = usePathname();
   const currentSection =
     navigation.find((item) => isCurrentPath(pathname, item.href))?.label ??
-    'Tools Panel';
+    'Planning';
 
   return (
     <div className="min-h-svh bg-zinc-50 text-zinc-950">
@@ -46,7 +46,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         data-app-shell-sidebar
       >
         <Link
-          aria-label="Accueil du Tools Panel"
+          aria-label="Accueil Corsica Linea"
           className="flex h-16 items-center border-b border-zinc-100 px-5"
           href="/tools/planning"
         >
@@ -111,7 +111,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         >
           <div className="flex items-center gap-3">
             <Link
-              aria-label="Accueil du Tools Panel"
+              aria-label="Accueil Corsica Linea"
               className="shrink-0 lg:hidden"
               href="/tools/planning"
             >

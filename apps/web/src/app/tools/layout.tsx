@@ -16,7 +16,7 @@ export default async function ToolsLayout({ children }: ToolsLayoutProps) {
         <section className="w-full max-w-xl rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
           <p className="eyebrow">Configuration requise</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-            Le Tools Panel est prêt à être connecté.
+            L’espace Corsica Linea est prêt à être connecté.
           </h1>
           <p className="mt-4 leading-7 text-zinc-600">
             Ajoutez les variables Supabase publiques à l’environnement web, puis

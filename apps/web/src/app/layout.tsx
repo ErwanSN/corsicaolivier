@@ -5,8 +5,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Tools Panel — Corsica Linea',
-    template: '%s — Tools Panel',
+    default: 'Corsica Linea',
+    template: '%s — Corsica Linea',
   },
   description: 'Plateforme sécurisée des outils opérationnels Corsica Linea',
 };
