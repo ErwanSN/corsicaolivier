@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 
+import corsicaLogo from '../assets/brand/corsica-linea.webp';
+
 type AppShellProps = Readonly<{
   children: ReactNode;
   userLabel: string;
@@ -78,10 +80,11 @@ export function AppShell({ children, userLabel }: AppShellProps) {
           <Image
             alt="Corsica Linea"
             className="h-10 w-auto object-contain"
-            height={506}
-            priority
-            src="/brand/corsica-linea.webp"
-            width={1800}
+            height={40}
+            loading="eager"
+            sizes="144px"
+            src={corsicaLogo}
+            width={144}
           />
         </Link>
 
@@ -132,10 +135,11 @@ export function AppShell({ children, userLabel }: AppShellProps) {
               <Image
                 alt="Corsica Linea"
                 className="h-7 w-auto object-contain"
-                height={506}
-                priority
-                src="/brand/corsica-linea.webp"
-                width={1800}
+                height={28}
+                loading="eager"
+                sizes="100px"
+                src={corsicaLogo}
+                width={100}
               />
             </Link>
             <p className="text-sm font-semibold">{currentSection}</p>

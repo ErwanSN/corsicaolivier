@@ -464,7 +464,17 @@ export async function setAgentPositionRule(formData: FormData): Promise<void> {
   const kind = stringValue(formData, 'kind');
   const note = stringValue(formData, 'note');
   const level = stringValue(formData, 'level');
-  const path = `/tools/planning/agents/${agentId}`;
+  const returnTo = stringValue(formData, 'returnTo');
+  const pagePath =
+    returnTo === 'agents'
+      ? '/tools/planning/agents'
+      : `/tools/planning/agents/${agentId}`;
+  const redirectPath =
+    returnTo === 'agents'
+      ? `${pagePath}?site=${encodeURIComponent(siteId)}&edit=${encodeURIComponent(agentId)}`
+      : pagePath;
+  const noticePath = (name: 'error' | 'saved', value: string) =>
+    `${redirectPath}${redirectPath.includes('?') ? '&' : '?'}${name}=${value}`;
   const isRestriction = kind === 'restriction';
 
   if (
@@ -476,7 +486,7 @@ export async function setAgentPositionRule(formData: FormData): Promise<void> {
     (isRestriction && note.length < 3) ||
     (!isRestriction && !['preferred', 'neutral', 'avoid'].includes(level))
   ) {
-    redirect(`${path}?error=invalid`);
+    redirect(noticePath('error', 'invalid'));
   }
 
   const result = await apiFetch(
@@ -499,9 +509,9 @@ export async function setAgentPositionRule(formData: FormData): Promise<void> {
     },
   );
 
-  if (result.error) redirect(`${path}?error=save`);
-  revalidatePath(path);
-  redirect(`${path}?saved=rule`);
+  if (result.error) redirect(noticePath('error', 'save'));
+  revalidatePath(pagePath);
+  redirect(noticePath('saved', 'rule'));
 }
 
 export async function createSkill(formData: FormData): Promise<void> {

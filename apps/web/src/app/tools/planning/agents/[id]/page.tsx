@@ -297,7 +297,10 @@ export default async function AgentDetailPage({
         </div>
       </details>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+      <section
+        className="rounded-2xl border border-zinc-200 bg-white p-5"
+        id="affectation-postes"
+      >
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div>
             <h2 className="font-semibold">Affectation aux postes</h2>

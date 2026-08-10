@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { SiteSwitcher } from '../../../../components/site-switcher';
 import { PlatformSelect } from '../../../../components/ui/platform-select';
 import { apiFetch } from '../../../../lib/api/server';
-import type { Agent, Site } from '../../../../lib/api/types';
+import type { Agent, Position, Site } from '../../../../lib/api/types';
+import { currentParisDate } from '../../../../lib/dates';
 import { orderSites } from '../../../../lib/sites';
 import { createAgent, updateAgent } from '../actions';
+import { AgentPositionQuickActions } from './agent-position-quick-actions';
 
 type AgentsPageProps = Readonly<{
   searchParams: Promise<{
@@ -32,12 +34,24 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
   const sites = orderSites(sitesResult.data ?? []);
   const selectedSite =
     sites.find((site) => site.id === params.site) ?? sites.at(0);
-  const agentsResult = selectedSite
-    ? await apiFetch<Agent[]>(
-        `/agents?siteId=${encodeURIComponent(selectedSite.id)}`,
-      )
-    : { data: [] as Agent[], error: sitesResult.error };
+  const [agentsResult, positionsResult] = selectedSite
+    ? await Promise.all([
+        apiFetch<Agent[]>(
+          `/agents?siteId=${encodeURIComponent(selectedSite.id)}`,
+        ),
+        apiFetch<Position[]>(
+          `/positions?organizationId=${encodeURIComponent(selectedSite.organization_id)}&siteId=${encodeURIComponent(selectedSite.id)}`,
+        ),
+      ])
+    : [
+        { data: [] as Agent[], error: sitesResult.error },
+        { data: [] as Position[], error: sitesResult.error },
+      ];
   const agents = agentsResult.data ?? [];
+  const positions = (positionsResult.data ?? []).filter(
+    (position) => position.active,
+  );
+  const today = currentParisDate();
   const query = params.q?.trim().toLocaleLowerCase('fr-FR') ?? '';
   const status = ['all', 'inactive'].includes(params.status ?? '')
     ? params.status
@@ -82,7 +96,9 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {params.saved === 'created'
             ? 'Agent ajouté.'
-            : 'Modifications enregistrées.'}
+            : params.saved === 'rule'
+              ? 'Poste ajouté au collaborateur.'
+              : 'Modifications enregistrées.'}
         </p>
       ) : null}
 
@@ -91,7 +107,7 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
         >
-          Impossible d’enregistrer. Vérifiez le nom, le matricule et les dates.
+          Impossible d’enregistrer. Vérifiez les informations saisies.
         </p>
       ) : null}
 
@@ -236,9 +252,9 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
           </button>
         </form>
 
-        {agentsResult.error ? (
+        {agentsResult.error || positionsResult.error ? (
           <p className="m-4 text-sm text-amber-800" role="alert">
-            {agentsResult.error}
+            Certaines données des collaborateurs n’ont pas pu être chargées.
           </p>
         ) : null}
 
@@ -386,13 +402,21 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
                       className="secondary-button"
                       href={`/tools/planning/agents/${agent.id}`}
                     >
-                      Gérer ses horaires, compétences et préférences
+                      Ouvrir la fiche complète
                     </Link>
                     <button className="primary-button" type="submit">
                       Enregistrer
                     </button>
                   </div>
                 </form>
+
+                <AgentPositionQuickActions
+                  agentId={agent.id}
+                  organizationId={agent.organization_id}
+                  positions={positions}
+                  siteId={agent.primary_site_id}
+                  validFrom={today}
+                />
               </details>
             ))}
           </div>

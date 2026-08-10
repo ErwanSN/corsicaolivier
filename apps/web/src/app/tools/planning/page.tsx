@@ -338,11 +338,6 @@ export default async function PlanningPage({
             <div className={styles.exportGroup}>
               <p className={styles.panelTitle}>Exporter</p>
               <div className={styles.exportActions}>
-                <PlanningExportButton
-                  draftVersionNumber={draftVersion?.version_number}
-                  siteName={site.name}
-                  weekStart={range.startsOn}
-                />
                 {activeVersionId ? (
                   <a
                     className="secondary-button"
@@ -350,17 +345,22 @@ export default async function PlanningPage({
                     href={`/tools/planning/export/${activeVersionId}`}
                   >
                     {draftVersion
-                      ? 'Exporter le brouillon en Excel'
-                      : 'Exporter en Excel'}
+                      ? 'Télécharger le brouillon en Excel'
+                      : 'Télécharger le tableau en Excel'}
                   </a>
                 ) : null}
+                <PlanningExportButton
+                  draftVersionNumber={draftVersion?.version_number}
+                  siteName={site.name}
+                  weekStart={range.startsOn}
+                />
                 {draftVersion && publishedVersion ? (
                   <a
                     className="secondary-button"
                     download
                     href={`/tools/planning/export/${publishedVersion.id}`}
                   >
-                    Exporter la version publiée en Excel
+                    Télécharger la version publiée en Excel
                   </a>
                 ) : null}
               </div>

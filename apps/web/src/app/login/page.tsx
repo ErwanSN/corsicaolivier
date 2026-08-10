@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 
+import loginBackground from '../../assets/brand/corsica-linea-background.webp';
+import corsicaHead from '../../assets/brand/corsica-linea-head.webp';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 import { LoginForm } from './login-form';
 
@@ -19,9 +21,10 @@ export default async function LoginPage() {
           alt="Flotte Corsica Linea en mer"
           className="object-cover object-center"
           fill
-          priority
+          placeholder="blur"
+          preload
           sizes="(min-width: 1024px) 60vw, 100vw"
-          src="/brand/corsica-linea-background.webp"
+          src={loginBackground}
         />
       </section>
 
@@ -30,10 +33,11 @@ export default async function LoginPage() {
           <Image
             alt="Tête corse Corsica Linea"
             className="h-20 w-20 self-center object-contain"
-            height={569}
-            priority
-            src="/brand/corsica-linea-head.webp"
-            width={569}
+            height={80}
+            loading="eager"
+            sizes="80px"
+            src={corsicaHead}
+            width={80}
           />
 
           <header className="mt-6 text-center">

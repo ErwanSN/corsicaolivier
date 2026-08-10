@@ -87,6 +87,11 @@ test('la fiche agent sépare clairement les postes appréciés et interdits', as
     'src/app/tools/planning/agents/[id]/page.tsx',
     'utf8',
   );
+  const list = await readFile('src/app/tools/planning/agents/page.tsx', 'utf8');
+  const quickActions = await readFile(
+    'src/app/tools/planning/agents/agent-position-quick-actions.tsx',
+    'utf8',
+  );
   const actions = await readFile('src/app/tools/planning/actions.ts', 'utf8');
 
   assert.match(page, /Affectation aux postes/);
@@ -97,6 +102,11 @@ test('la fiche agent sépare clairement les postes appréciés et interdits', as
   assert.doesNotMatch(page, /htmlFor="ruleKind"|htmlFor="ruleLevel"/);
   assert.doesNotMatch(page, /\{preference\.level\}/);
   assert.doesNotMatch(page, /Compétences|agentSkills|setAgentSkill/);
+  assert.match(list, /<AgentPositionQuickActions/);
+  assert.match(quickActions, /Poste qu’il apprécie/);
+  assert.match(quickActions, /Poste qu’il ne doit pas faire/);
+  assert.match(quickActions, /name="returnTo" type="hidden" value="agents"/);
+  assert.match(actions, /returnTo === 'agents'/);
   assert.match(actions, /note: note \|\| undefined/);
 });
 
@@ -399,7 +409,11 @@ test('une version de planning peut être téléchargée en Excel', async () => {
     'utf8',
   );
 
-  assert.match(planning, /Exporter en Excel/);
+  assert.match(planning, /Télécharger le tableau en Excel/);
+  assert.ok(
+    planning.indexOf('Télécharger le tableau en Excel') <
+      planning.indexOf('<PlanningExportButton'),
+  );
   assert.match(planning, /activeVersionId/);
   assert.match(route, /export\.xlsx/);
   assert.match(
