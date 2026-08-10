@@ -10,6 +10,8 @@ test('la connexion utilise un seul logo et le fond Corsica Linea fourni', async 
   assert.match(source, /Flotte Corsica Linea en mer/);
   assert.doesNotMatch(source, /CC BY-SA 4\.0/);
   assert.equal(source.match(/src="\/brand\/corsica-linea\.webp"/g)?.length, 1);
+  assert.match(source, /h-12 w-auto self-center object-contain/);
+  assert.match(source, /mt-8 text-center/);
 });
 
 test('la page reste centrée sur la connexion', async () => {

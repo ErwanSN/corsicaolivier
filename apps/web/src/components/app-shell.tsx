@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { useFormStatus } from 'react-dom';
 
 import { logout } from '../app/login/actions';
 
@@ -31,6 +32,25 @@ const navigation = [
 function isCurrentPath(pathname: string, href: string): boolean {
   if (href === '/tools/planning') return pathname === href;
   return pathname.startsWith(href);
+}
+
+function LogoutButton({ compact = false }: Readonly<{ compact?: boolean }>) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      aria-label="Se déconnecter"
+      className={
+        compact
+          ? 'h-9 border border-zinc-300 px-3 text-xs font-semibold text-zinc-700 transition hover:border-red-600 hover:text-red-700 disabled:cursor-wait disabled:opacity-60'
+          : 'flex h-10 w-full items-center justify-center border border-zinc-300 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:border-red-600 hover:text-red-700 disabled:cursor-wait disabled:opacity-60'
+      }
+      disabled={pending}
+      type="submit"
+    >
+      {pending ? 'Déconnexion…' : compact ? 'Déconnexion' : 'Se déconnecter'}
+    </button>
+  );
 }
 
 export function AppShell({ children, userLabel }: AppShellProps) {
@@ -93,12 +113,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
           <div className="mt-2 border border-zinc-200 bg-zinc-50 p-3">
             <p className="truncate text-sm font-medium">{userLabel}</p>
             <form action={logout} className="mt-2">
-              <button
-                className="text-xs font-medium text-zinc-500 hover:text-red-700"
-                type="submit"
-              >
-                Se déconnecter
-              </button>
+              <LogoutButton />
             </form>
           </div>
         </div>
@@ -128,9 +143,14 @@ export function AppShell({ children, userLabel }: AppShellProps) {
               <p className="text-sm font-semibold">{currentSection}</p>
             </div>
           </div>
-          <p className="max-w-40 truncate text-sm text-zinc-500 lg:hidden">
-            {userLabel}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="hidden max-w-40 truncate text-sm text-zinc-500 sm:block">
+              {userLabel}
+            </p>
+            <form action={logout}>
+              <LogoutButton compact />
+            </form>
+          </div>
         </header>
 
         <main

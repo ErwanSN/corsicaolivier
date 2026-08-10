@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { createSupabaseServerClient } from '../../lib/supabase/server';
@@ -48,6 +49,23 @@ export async function login(
 export async function logout(): Promise<void> {
   const supabase = await createSupabaseServerClient();
 
-  await supabase?.auth.signOut();
+  if (supabase) {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+      if (error) {
+        await supabase.auth.signOut({ scope: 'local' });
+      }
+    } catch {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // La redirection vers la connexion reste prioritaire même si la
+        // session distante est déjà expirée ou momentanément inaccessible.
+      }
+    }
+  }
+
+  revalidatePath('/', 'layout');
   redirect('/login');
 }

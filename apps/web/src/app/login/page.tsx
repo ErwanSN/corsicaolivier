@@ -29,13 +29,14 @@ export default async function LoginPage() {
         <div className="mx-auto flex w-full max-w-sm flex-col justify-center">
           <Image
             alt="Corsica Linea"
-            className="h-9 w-auto self-start object-contain"
+            className="h-12 w-auto self-center object-contain"
             height={506}
+            priority
             src="/brand/corsica-linea.webp"
             width={1800}
           />
 
-          <header className="mt-12">
+          <header className="mt-8 text-center">
             <h1 className="text-3xl font-semibold tracking-tight text-zinc-950">
               Connexion
             </h1>
