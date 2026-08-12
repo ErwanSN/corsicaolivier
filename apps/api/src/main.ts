@@ -10,13 +10,16 @@ import {
 
 import { AppModule } from './app.module';
 import type { Environment } from './config/environment';
+import { createHttpLoggerOptions } from './config/http-logger';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      logger: process.env.NODE_ENV !== 'test',
-      trustProxy: true,
+      logger: createHttpLoggerOptions(process.env.NODE_ENV ?? 'development'),
+      // The API is reachable only from the private web service. Never derive
+      // throttling identities from caller-controlled forwarding headers.
+      trustProxy: false,
     }),
   );
   const configService =

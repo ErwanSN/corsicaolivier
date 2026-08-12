@@ -18,6 +18,29 @@ export type Agent = Readonly<{
   left_on: string | null;
 }>;
 
+export type AgentOffboardingPlan = Readonly<{
+  status: 'scheduled' | 'completed' | 'cancelled' | 'failed';
+  effectiveAt: string;
+  retryCount: number;
+  failureCode: string | null;
+  failedAt: string | null;
+}>;
+
+export type AgentSearchPage = Readonly<{
+  items: Agent[];
+  included: Agent[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+  counts: Readonly<{
+    all: number;
+    active: number;
+    inactive: number;
+  }>;
+}>;
+
 export type Position = Readonly<{
   id: string;
   organization_id: string;
@@ -27,6 +50,15 @@ export type Position = Readonly<{
   description: string | null;
   color_token: string;
   active: boolean;
+}>;
+
+export type PositionSearchPage = Readonly<{
+  items: Position[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
 }>;
 
 export type PlanningPeriod = Readonly<{
@@ -51,6 +83,13 @@ export type PortCall = Readonly<{
   estimated_arrival_at: string | null;
   estimated_departure_at: string | null;
   external_reference: string | null;
+  source: string;
+  source_revision: string | null;
+  source_priority: number;
+  source_sequence: number | null;
+  source_received_at: string;
+  source_override_until: string | null;
+  timing_lock_version: number;
 }>;
 
 export type LoadForecast = Readonly<{
@@ -63,6 +102,10 @@ export type LoadForecast = Readonly<{
   coach_count: number;
   source: string;
   source_revision: string | null;
+  source_priority: number;
+  source_sequence: number;
+  source_received_at: string;
+  payload_fingerprint: string;
   received_at: string;
 }>;
 
@@ -86,6 +129,8 @@ export type DemandProfileLine = Readonly<{
   base_agents: number;
   passengers_per_extra_agent: number | null;
   vehicles_per_extra_agent: number | null;
+  freight_units_per_extra_agent: number | null;
+  coaches_per_extra_agent: number | null;
   minimum_agents: number;
   maximum_agents: number | null;
 }>;
@@ -97,6 +142,8 @@ export type ScheduleVersion = Readonly<{
   status: 'draft' | 'validated' | 'published' | 'archived';
   label: string;
   published_at: string | null;
+  superseded_at: string | null;
+  lock_version: number;
 }>;
 
 export type AgentGroup = Readonly<{
@@ -188,6 +235,52 @@ export type AgentSkill = Readonly<{
   verified_by: string | null;
 }>;
 
+export type AgentUnavailability = Readonly<{
+  id: string;
+  organization_id: string;
+  site_id: string;
+  agent_id: string;
+  kind: 'leave' | 'training' | 'medical' | 'rest' | 'other';
+  starts_at: string;
+  ends_at: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}>;
+
+export type AgentUnavailabilityPage = Readonly<{
+  items: AgentUnavailability[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
+
+export type AgentNotification = Readonly<{
+  id: string;
+  organizationId: string;
+  siteId: string;
+  agentId: string;
+  scenarioId: string | null;
+  status: 'pending' | 'sent' | 'acknowledged' | 'failed' | 'cancelled';
+  channel: 'in_app' | 'email' | 'sms' | 'push';
+  subject: string;
+  body: string;
+  sentAt: string | null;
+  acknowledgedAt: string | null;
+  createdAt: string;
+}>;
+
+export type AgentNotificationPage = Readonly<{
+  items: AgentNotification[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
+
 export type PositionSkillRequirement = Readonly<{
   id: string;
   position_id: string;
@@ -214,6 +307,15 @@ export type PlanningShift = Readonly<{
   break_minutes: number;
   origin: 'manual' | 'generated' | 'replanned';
   note: string | null;
+  planned_minutes?: number;
+}>;
+
+export type PlanningShiftBreak = Readonly<{
+  id: string;
+  planning_shift_id: string;
+  starts_at: string;
+  ends_at: string;
+  label: string | null;
 }>;
 
 export type ShiftAssignment = Readonly<{
@@ -236,6 +338,7 @@ export type ScheduleContent = Readonly<{
   period: PlanningPeriod;
   shifts: PlanningShift[];
   assignments: ShiftAssignment[];
+  breaks: PlanningShiftBreak[];
 }>;
 
 export type StaffingRequirement = Readonly<{
@@ -246,6 +349,43 @@ export type StaffingRequirement = Readonly<{
   starts_at: string;
   ends_at: string;
   required_agents: number;
+  source_revision: string | null;
+  is_snapshot: boolean;
+  snapshot_captured_at: string | null;
+  snapshot_schema_version: number | null;
+  source_facts: Record<string, unknown>;
+}>;
+
+export type PlanningWorkforceConflict = Readonly<{
+  id: string;
+  organization_id: string;
+  site_id: string;
+  schedule_version_id: string;
+  planning_period_id: string;
+  planning_period_starts_on: string;
+  planning_shift_id: string;
+  shift_starts_at: string;
+  shift_ends_at: string;
+  agent_id: string;
+  agent_display_name: string;
+  conflict_kind:
+    | 'scope'
+    | 'inactive'
+    | 'employment'
+    | 'contract'
+    | 'unavailability'
+    | 'restriction'
+    | 'skill'
+    | 'position';
+  summary: string;
+  details: Record<string, unknown>;
+  status: 'open' | 'resolved';
+  detected_at: string;
+  last_detected_at: string;
+  resolved_at: string | null;
+  resolution_note: string | null;
+  editable_schedule_version_id: string | null;
+  total_count: number;
 }>;
 
 export type ReplanningScenario = Readonly<{
@@ -254,10 +394,20 @@ export type ReplanningScenario = Readonly<{
   site_id: string;
   base_schedule_version_id: string;
   candidate_schedule_version_id: string | null;
+  candidate_lock_version: number | null;
   status: 'draft' | 'simulated' | 'approved' | 'rejected' | 'applied';
   title: string;
   summary: string | null;
   created_at: string;
+}>;
+
+export type ReplanningScenarioPage = Readonly<{
+  items: ReplanningScenario[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
 }>;
 
 export type ReplanningScenarioDetail = Readonly<{

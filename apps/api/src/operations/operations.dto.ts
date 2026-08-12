@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsDateString,
   IsInt,
   IsOptional,
   IsString,
@@ -97,13 +98,15 @@ export class CreateLoadForecastDto {
   declare coachCount?: number;
 
   @IsString()
-  @Length(2, 50)
-  declare source: string;
+  @Length(3, 500)
+  declare reason: string;
+
+  @IsDateString({ strict: true })
+  declare validUntil: string;
 
   @IsOptional()
-  @IsString()
-  @Length(1, 100)
-  declare sourceRevision?: string;
+  @IsUUID()
+  declare expectedEffectiveForecastId?: string;
 }
 
 export class CreateDemandProfileDto {
@@ -162,6 +165,16 @@ export class CreateDemandProfileLineDto {
   @IsInt()
   @Min(1)
   declare vehiclesPerExtraAgent?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  declare freightUnitsPerExtraAgent?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  declare coachesPerExtraAgent?: number;
 
   @IsInt()
   @Min(0)

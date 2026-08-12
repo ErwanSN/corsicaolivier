@@ -1,15 +1,14 @@
 import Link from 'next/link';
 
 import { HoursInput } from '../../../../components/ui/hours-input';
-import { PlatformSelect } from '../../../../components/ui/platform-select';
 import { apiFetch } from '../../../../lib/api/server';
 import type {
-  Agent,
+  AgentSearchPage,
   AgentGroup,
   GroupMembership,
   Site,
 } from '../../../../lib/api/types';
-import { currentParisDate } from '../../../../lib/dates';
+import { currentDateInTimeZone } from '../../../../lib/dates';
 import { orderSites } from '../../../../lib/sites';
 import {
   addGroupMember,
@@ -21,6 +20,8 @@ import {
 type GroupsPageProps = Readonly<{
   searchParams: Promise<{
     add?: string;
+    agentPage?: string;
+    agentQ?: string;
     group?: string;
     error?: string;
     saved?: string;
@@ -30,33 +31,26 @@ type GroupsPageProps = Readonly<{
 
 export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const params = await searchParams;
-  const [sitesResult, groupsResult] = await Promise.all([
-    apiFetch<Site[]>('/sites'),
-    apiFetch<AgentGroup[]>('/groups'),
-  ]);
+  const sitesResult = await apiFetch<Site[]>('/sites');
   const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
+  const groupsResult = site
+    ? await apiFetch<AgentGroup[]>(
+        `/groups?siteId=${encodeURIComponent(site.id)}`,
+      )
+    : { data: [] as AgentGroup[], error: sitesResult.error };
   const groups = groupsResult.data ?? [];
-  const organizationId =
-    groups.at(0)?.organization_id ?? sites.at(0)?.organization_id;
+  const organizationId = site?.organization_id;
   const selectedGroup = groups.find((group) => group.id === params.group);
-  const today = currentParisDate();
-
-  const [agentsResult, membersResult] = organizationId
-    ? await Promise.all([
-        apiFetch<Agent[]>(
-          `/agents?organizationId=${encodeURIComponent(organizationId)}`,
-        ),
-        selectedGroup
-          ? apiFetch<GroupMembership[]>(`/groups/${selectedGroup.id}/members`)
-          : Promise.resolve({ data: [] as GroupMembership[], error: null }),
-      ])
-    : [
-        { data: [] as Agent[], error: sitesResult.error },
-        { data: [] as GroupMembership[], error: groupsResult.error },
-      ];
-
-  const agents = agentsResult.data ?? [];
+  const today = currentDateInTimeZone(site?.timezone ?? 'Europe/Paris');
+  const agentQuery = params.agentQ?.trim().slice(0, 80) ?? '';
+  const requestedAgentPage = Math.max(
+    1,
+    Number.parseInt(params.agentPage ?? '1', 10) || 1,
+  );
+  const membersResult = selectedGroup
+    ? await apiFetch<GroupMembership[]>(`/groups/${selectedGroup.id}/members`)
+    : { data: [] as GroupMembership[], error: null };
   const members = (membersResult.data ?? []).filter(
     (membership) =>
       membership.effective_from <= today &&
@@ -65,10 +59,44 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const memberAgentIds = new Set(
     members.map((membership) => membership.agent_id),
   );
-  const availableAgents = agents.filter(
-    (agent) => agent.active && !memberAgentIds.has(agent.id),
+  const memberIdChunks = Array.from(
+    {
+      length: Math.max(1, Math.ceil(memberAgentIds.size / 200)),
+    },
+    (_, index) => [...memberAgentIds].slice(index * 200, (index + 1) * 200),
+  );
+  const agentResults =
+    organizationId && selectedGroup
+      ? await Promise.all(
+          memberIdChunks.map((includeIds, index) => {
+            const search = new URLSearchParams({
+              organizationId,
+              page: String(index === 0 ? requestedAgentPage : 1),
+              pageSize: index === 0 ? '10' : '1',
+              siteId: site.id,
+              status: 'active',
+            });
+            if (agentQuery && index === 0) search.set('q', agentQuery);
+            if (includeIds.length)
+              search.set('includeIds', includeIds.join(','));
+            return apiFetch<AgentSearchPage>(`/agents/search?${search}`);
+          }),
+        )
+      : [];
+  const agentPage = agentResults.at(0)?.data;
+  const agents = [
+    ...new Map(
+      [
+        ...(agentPage?.items ?? []),
+        ...agentResults.flatMap((result) => result.data?.included ?? []),
+      ].map((agent) => [agent.id, agent]),
+    ).values(),
+  ];
+  const availableAgents = (agentPage?.items ?? []).filter(
+    (agent) => !memberAgentIds.has(agent.id),
   );
   const agentById = new Map(agents.map((agent) => [agent.id, agent]));
+  const agentLoadFailed = agentResults.some((result) => result.error);
   const weeklyTargetMinutes = selectedGroup?.weekly_target_minutes ?? null;
   const monthlyTargetMinutes = selectedGroup?.monthly_target_minutes ?? null;
   const groupsHref = `/tools/planning/groupes?site=${site?.id ?? ''}`;
@@ -128,6 +156,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
             className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
           >
             <input name="organizationId" type="hidden" value={organizationId} />
+            <input name="siteId" type="hidden" value={site?.id ?? ''} />
             <div className="min-w-0 flex-1 space-y-1.5">
               <label className="field-label" htmlFor="groupName">
                 Nom du groupe
@@ -178,6 +207,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                 value={organizationId}
               />
               <input name="groupId" type="hidden" value={selectedGroup.id} />
+              <input name="siteId" type="hidden" value={site?.id ?? ''} />
 
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <HoursInput
@@ -223,40 +253,117 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
             </form>
           </div>
 
-          {availableAgents.length ? (
-            <form
-              action={addGroupMember}
-              className="flex flex-col gap-3 border-b border-zinc-200 p-4 sm:flex-row sm:items-end"
-            >
+          <details
+            className="border-b border-zinc-200 p-4"
+            open={Boolean(agentQuery) || requestedAgentPage > 1}
+          >
+            <summary className="cursor-pointer text-sm font-semibold">
+              + Ajouter un collaborateur
+            </summary>
+            <form className="mt-4 flex flex-col gap-2 sm:flex-row" method="get">
+              <input name="site" type="hidden" value={site?.id ?? ''} />
+              <input name="group" type="hidden" value={selectedGroup.id} />
               <input
-                name="organizationId"
-                type="hidden"
-                value={organizationId}
+                autoComplete="off"
+                className="field-input min-w-0 flex-1"
+                defaultValue={agentQuery}
+                maxLength={80}
+                name="agentQ"
+                placeholder="Nom ou matricule"
+                type="search"
               />
-              <input name="groupId" type="hidden" value={selectedGroup.id} />
-              <input name="effectiveFrom" type="hidden" value={today} />
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <label className="field-label" htmlFor="groupAgent">
-                  Ajouter un collaborateur
-                </label>
-                <PlatformSelect id="groupAgent" name="agentId" required>
-                  <option value="">Choisir dans la liste…</option>
-                  {availableAgents.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.display_name}
-                    </option>
-                  ))}
-                </PlatformSelect>
-              </div>
-              <button className="primary-button" type="submit">
-                Ajouter au groupe
+              <button className="secondary-button" type="submit">
+                Rechercher
               </button>
+              {agentQuery ? (
+                <Link
+                  className="secondary-button"
+                  href={`${groupsHref}&group=${selectedGroup.id}`}
+                >
+                  Effacer
+                </Link>
+              ) : null}
             </form>
-          ) : (
-            <p className="border-b border-zinc-200 p-4 text-sm text-zinc-500">
-              Tous les collaborateurs actifs sont déjà dans ce groupe.
-            </p>
-          )}
+
+            {agentLoadFailed ? (
+              <p className="mt-3 text-sm text-red-700" role="alert">
+                La recherche de collaborateurs est momentanément indisponible.
+              </p>
+            ) : availableAgents.length ? (
+              <div className="mt-3 divide-y divide-zinc-100 border border-zinc-200">
+                {availableAgents.map((agent) => (
+                  <form
+                    action={addGroupMember}
+                    className="flex items-center justify-between gap-3 px-3 py-2"
+                    key={agent.id}
+                  >
+                    <input
+                      name="organizationId"
+                      type="hidden"
+                      value={organizationId}
+                    />
+                    <input
+                      name="groupId"
+                      type="hidden"
+                      value={selectedGroup.id}
+                    />
+                    <input name="siteId" type="hidden" value={site.id} />
+                    <input name="effectiveFrom" type="hidden" value={today} />
+                    <input name="isPrimary" type="hidden" value="true" />
+                    <input name="agentId" type="hidden" value={agent.id} />
+                    <span className="min-w-0">
+                      <strong className="block truncate text-sm">
+                        {agent.display_name}
+                      </strong>
+                      <span className="text-xs text-zinc-500">
+                        {agent.employee_number}
+                      </span>
+                    </span>
+                    <button className="secondary-button shrink-0" type="submit">
+                      Ajouter
+                    </button>
+                  </form>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-zinc-500">
+                {agentPage?.total
+                  ? 'Les résultats de cette page appartiennent déjà au groupe.'
+                  : 'Aucun collaborateur actif ne correspond.'}
+              </p>
+            )}
+
+            {(agentPage?.totalPages ?? 1) > 1 ? (
+              <nav
+                aria-label="Pagination des collaborateurs disponibles"
+                className="mt-3 flex items-center justify-between gap-2 text-xs"
+              >
+                {agentPage && agentPage.page > 1 ? (
+                  <Link
+                    className="secondary-button"
+                    href={`${groupsHref}&group=${selectedGroup.id}&agentPage=${agentPage.page - 1}${agentQuery ? `&agentQ=${encodeURIComponent(agentQuery)}` : ''}`}
+                  >
+                    ← Précédents
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-zinc-500">
+                  {agentPage?.page} / {agentPage?.totalPages}
+                </span>
+                {agentPage?.hasMore ? (
+                  <Link
+                    className="secondary-button"
+                    href={`${groupsHref}&group=${selectedGroup.id}&agentPage=${agentPage.page + 1}${agentQuery ? `&agentQ=${encodeURIComponent(agentQuery)}` : ''}`}
+                  >
+                    Suivants →
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </nav>
+            ) : null}
+          </details>
 
           {members.length ? (
             <div className="divide-y divide-zinc-200">
@@ -272,6 +379,11 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                     {agentById.get(membership.agent_id)?.display_name ??
                       'Collaborateur indisponible'}
                   </span>
+                  {membership.is_primary ? (
+                    <span className="shrink-0 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                      Groupe principal
+                    </span>
+                  ) : null}
                   <form action={endGroupMembership}>
                     <input
                       name="organizationId"
@@ -283,6 +395,7 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
                       type="hidden"
                       value={selectedGroup.id}
                     />
+                    <input name="siteId" type="hidden" value={site?.id ?? ''} />
                     <input
                       name="membershipId"
                       type="hidden"

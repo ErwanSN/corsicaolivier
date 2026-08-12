@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import { readAgentDetailSource } from './agent-detail-source.mjs';
+import { readPlanningGridSource } from './planning-grid-source.mjs';
+
 test('la navigation principale reste limitée aux parcours utiles', async () => {
   const shell = await readFile('src/components/app-shell.tsx', 'utf8');
   const settings = await readFile(
@@ -35,7 +38,7 @@ test('les commandes du planning tiennent dans une seule barre compacte', async (
   assert.doesNotMatch(page, /styles\.zoneTabs/);
   assert.doesNotMatch(page, /styles\.toolbarActions/);
   assert.doesNotMatch(page, /styles\.publishMenu/);
-  assert.match(styles, /min-height: 3\.1rem/);
+  assert.match(styles, /min-height: 3\.4rem/);
 });
 
 test('la page des besoins permet de revenir aux réglages', async () => {
@@ -62,17 +65,14 @@ test('la page des groupes permet de revenir aux réglages', async () => {
 });
 
 test('la grille conserve huit lignes et les remplace avec les postes saisis', async () => {
-  const grid = await readFile('src/components/weekly-planning-grid.tsx', 'utf8');
+  const grid = await readPlanningGridSource();
   const styles = await readFile(
     'src/components/weekly-planning-grid.module.css',
     'utf8',
   );
 
   assert.match(grid, /MIN_VISIBLE_POSITION_ROWS = 8/);
-  assert.match(
-    grid,
-    /MIN_VISIBLE_POSITION_ROWS - data\.positions\.length/,
-  );
+  assert.match(grid, /MIN_VISIBLE_POSITION_ROWS - data\.positions\.length/);
   assert.match(grid, /data-empty-planning-row/);
   assert.match(styles, /min-height: 4\.25rem/);
 });
@@ -91,4 +91,16 @@ test('la grille tient sur desktop et montre plusieurs jours sur mobile', async (
   assert.match(styles, /@media \(max-width: 767px\)/);
   assert.match(styles, /grid-template-columns: 7\.25rem repeat\(7, 7\.25rem\)/);
   assert.match(styles, /min-width: 58rem/);
+  assert.match(styles, /@media \(max-width: 420px\)/);
+  assert.match(styles, /grid-template-columns: 6\.5rem repeat\(7, 6\.75rem\)/);
+});
+
+test('la navigation conserve la zone active entre les écrans', async () => {
+  const shell = await readFile('src/components/app-shell.tsx', 'utf8');
+  const detail = await readAgentDetailSource();
+
+  assert.match(shell, /useSearchParams/);
+  assert.match(shell, /navigationHref\(item\.href, siteId\)/);
+  assert.match(shell, /new URLSearchParams\(\{ site: siteId \}\)/);
+  assert.match(detail, /agents\?site=/);
 });

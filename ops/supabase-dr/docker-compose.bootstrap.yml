@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: corsica-supabase-dr-bootstrap:15.8.1.085
+    build:
+      context: .
+      dockerfile: Dockerfile.bootstrap
+    restart: 'no'
+    shm_size: 256mb
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: supabase_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXP: ${JWT_EXP:?JWT_EXP is required}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U supabase_admin -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    volumes:
+      - supabase_dr_pgdata:/var/lib/postgresql/data
+    networks:
+      - dr_internal
+
+volumes:
+  supabase_dr_pgdata:
+    name: ${DR_PGDATA_VOLUME:?DR_PGDATA_VOLUME is required}
+    external: true
+
+networks:
+  dr_internal:
+    internal: true

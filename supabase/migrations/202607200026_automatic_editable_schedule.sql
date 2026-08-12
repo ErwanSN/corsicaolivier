@@ -244,7 +244,7 @@ declare
 begin
   select app_user.id into actor_id
   from public.app_users app_user
-  where lower(app_user.email) = 'otourre@corsicalinea.com'
+  where lower(app_user.email) = 'demo.operator@example.invalid'
     and app_user.status = 'active'
   order by app_user.created_at
   limit 1;

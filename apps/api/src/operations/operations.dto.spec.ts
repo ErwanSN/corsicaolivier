@@ -17,6 +17,8 @@ describe('DTO des opérations', () => {
       baseAgents: 2,
       passengersPerExtraAgent: 150,
       vehiclesPerExtraAgent: 50,
+      freightUnitsPerExtraAgent: 20,
+      coachesPerExtraAgent: 4,
       minimumAgents: 2,
       maximumAgents: 12,
     });
@@ -34,10 +36,11 @@ describe('DTO des opérations', () => {
       durationMinutes: 0,
       baseAgents: 1,
       passengersPerExtraAgent: 0,
+      freightUnitsPerExtraAgent: 0,
       minimumAgents: 1,
     });
 
-    expect((await validate(input)).length).toBeGreaterThanOrEqual(3);
+    expect((await validate(input)).length).toBeGreaterThanOrEqual(4);
   });
 
   it('accepte une prévision vide mais jamais une charge négative', async () => {
@@ -47,7 +50,8 @@ describe('DTO des opérations', () => {
       portCallId: '00000000-0000-4000-8000-000000000003',
       passengerCount: 0,
       vehicleCount: 0,
-      source: 'tools-panel',
+      reason: 'Comptage terrain actualisé',
+      validUntil: '2026-08-11T14:00:00.000Z',
     });
     const invalid = Object.assign(new CreateLoadForecastDto(), {
       ...valid,
@@ -56,5 +60,24 @@ describe('DTO des opérations', () => {
 
     await expect(validate(valid)).resolves.toHaveLength(0);
     expect(await validate(invalid)).not.toHaveLength(0);
+  });
+
+  it('n’accepte aucune provenance maritime choisie par le navigateur', async () => {
+    const input = Object.assign(new CreateLoadForecastDto(), {
+      organizationId: '00000000-0000-4000-8000-000000000001',
+      siteId: '00000000-0000-4000-8000-000000000002',
+      portCallId: '00000000-0000-4000-8000-000000000003',
+      passengerCount: 10,
+      vehicleCount: 5,
+      source: 'corsica-linea-feed',
+      sourceRevision: 'reserved-feed-41',
+    });
+
+    expect(
+      await validate(input, {
+        forbidNonWhitelisted: true,
+        whitelist: true,
+      }),
+    ).not.toHaveLength(0);
   });
 });

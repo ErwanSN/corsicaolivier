@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 import { throwForSupabaseError } from '../common/supabase-error';
+import { nullableRpcArgs } from '../database/database.aliases';
 import type { Database } from '../database/database.types';
 import { SupabaseService } from '../database/supabase.service';
 import type {
@@ -87,34 +88,53 @@ export class OperationsService {
   async listLoadForecasts(accessToken: string, portCallId: string) {
     const { data, error } = await this.supabase
       .forUser(accessToken)
-      .from('call_load_forecasts')
-      .select('*')
-      .eq('port_call_id', portCallId)
-      .order('received_at', { ascending: false })
-      .limit(50);
+      .rpc('get_latest_call_load_forecasts', {
+        target_port_call_ids: [portCallId],
+      });
 
     throwForSupabaseError(error, 'chargement des prévisions');
     return data ?? [];
   }
 
   async createLoadForecast(accessToken: string, input: CreateLoadForecastDto) {
-    const { data, error } = await this.supabase
-      .forUser(accessToken)
-      .from('call_load_forecasts')
-      .insert({
-        organization_id: input.organizationId,
-        site_id: input.siteId,
-        port_call_id: input.portCallId,
-        passenger_count: input.passengerCount,
-        passenger_quota: input.passengerQuota,
-        vehicle_count: input.vehicleCount,
-        freight_unit_count: input.freightUnitCount,
-        coach_count: input.coachCount,
-        source: input.source,
-        source_revision: input.sourceRevision,
-      })
-      .select()
-      .single();
+    const client = this.supabase.forUser(accessToken);
+    const { data, error } = input.expectedEffectiveForecastId
+      ? await client.rpc(
+          'override_call_load_forecast',
+          nullableRpcArgs<
+            'override_call_load_forecast',
+            'new_passenger_quota' | 'expected_effective_forecast_id'
+          >({
+            target_organization_id: input.organizationId,
+            target_site_id: input.siteId,
+            target_port_call_id: input.portCallId,
+            new_passenger_count: input.passengerCount,
+            new_passenger_quota: input.passengerQuota ?? null,
+            new_vehicle_count: input.vehicleCount,
+            new_freight_unit_count: input.freightUnitCount ?? 0,
+            new_coach_count: input.coachCount ?? 0,
+            override_reason: input.reason,
+            override_valid_until: input.validUntil,
+            expected_effective_forecast_id:
+              input.expectedEffectiveForecastId ?? null,
+          }),
+        )
+      : await client.rpc(
+          'create_manual_call_load_forecast',
+          nullableRpcArgs<
+            'create_manual_call_load_forecast',
+            'new_passenger_quota'
+          >({
+            target_organization_id: input.organizationId,
+            target_site_id: input.siteId,
+            target_port_call_id: input.portCallId,
+            new_passenger_count: input.passengerCount,
+            new_passenger_quota: input.passengerQuota ?? null,
+            new_vehicle_count: input.vehicleCount,
+            new_freight_unit_count: input.freightUnitCount ?? 0,
+            new_coach_count: input.coachCount ?? 0,
+          }),
+        );
 
     throwForSupabaseError(error, 'création de la prévision');
     return this.requireData(data, 'Prévision créée sans réponse.');
@@ -185,6 +205,8 @@ export class OperationsService {
         base_agents: input.baseAgents,
         passengers_per_extra_agent: input.passengersPerExtraAgent,
         vehicles_per_extra_agent: input.vehiclesPerExtraAgent,
+        freight_units_per_extra_agent: input.freightUnitsPerExtraAgent,
+        coaches_per_extra_agent: input.coachesPerExtraAgent,
         minimum_agents: input.minimumAgents,
         maximum_agents: input.maximumAgents,
       })
@@ -201,6 +223,7 @@ export class OperationsService {
       .from('staffing_requirements')
       .select('*')
       .eq('planning_period_id', planningPeriodId)
+      .is('retired_at', null)
       .order('starts_at');
 
     throwForSupabaseError(error, 'chargement des besoins');

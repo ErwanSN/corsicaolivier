@@ -253,18 +253,32 @@ declare
   galeotta_call_id uuid;
   cancelled_call_id uuid;
 begin
+  -- Fail closed: demonstration data is never loaded by a normal migration
+  -- run, including production. A disposable environment must opt in before
+  -- applying this migration with SET app.load_demo_data = 'true'.
+  if coalesce(current_setting('app.load_demo_data', true), '') <> 'true' then
+    return;
+  end if;
+
   select users.id into actor_id
   from auth.users users
-  where lower(users.email) = 'otourre@corsicalinea.com'
+  where lower(users.email) = 'demo.operator@example.invalid'
   order by users.created_at
   limit 1;
 
+  -- Demo scenarios are optional: a clean environment has no identity account
+  -- yet, and migrations must not fail because of non-production data.
   if actor_id is null then
-    raise exception 'The Olivier demo owner account is required before loading scenarios';
+    return;
   end if;
 
   insert into public.app_users (id, email, display_name, status)
-  values (actor_id, 'otourre@corsicalinea.com', 'Olivier Tourre', 'active')
+  values (
+    actor_id,
+    'demo.operator@example.invalid',
+    'Opérateur Démo',
+    'active'
+  )
   on conflict (id) do update
   set email = excluded.email,
       display_name = excluded.display_name,
@@ -920,12 +934,12 @@ begin
     values
       ('d0000000-0000-4000-8000-000000000301'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0720', '2026-07-20 04:30:00+02'::timestamptz, '2026-07-20 11:30:00+02'::timestamptz, '[DEMO] Service du matin'),
       ('d0000000-0000-4000-8000-000000000302'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0721', '2026-07-21 13:00:00+02'::timestamptz, '2026-07-21 20:00:00+02'::timestamptz, '[DEMO] Escale avancée'),
-      ('d0000000-0000-4000-8000-000000000303'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0722', '2026-07-22 05:00:00+02'::timestamptz, '2026-07-22 12:00:00+02'::timestamptz, '[DEMO] Escale retardée'),
+      ('d0000000-0000-4000-8000-000000000303'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0722', '2026-07-22 07:00:00+02'::timestamptz, '2026-07-22 14:00:00+02'::timestamptz, '[DEMO] Escale retardée'),
       ('d0000000-0000-4000-8000-000000000304'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0723', '2026-07-23 13:00:00+02'::timestamptz, '2026-07-23 20:00:00+02'::timestamptz, '[DEMO] Départ sans arrivée'),
       ('d0000000-0000-4000-8000-000000000305'::uuid, 'DEMO-001', 'CA-03-GUICHETS', 'DEMO-ROT-0724', '2026-07-24 13:00:00+02'::timestamptz, '2026-07-24 20:00:00+02'::timestamptz, '[DEMO] Haute charge'),
       ('d0000000-0000-4000-8000-000000000311'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0720', '2026-07-20 04:30:00+02'::timestamptz, '2026-07-20 11:30:00+02'::timestamptz, '[DEMO] Poste à éviter accepté manuellement'),
       ('d0000000-0000-4000-8000-000000000312'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0721', '2026-07-21 13:00:00+02'::timestamptz, '2026-07-21 20:00:00+02'::timestamptz, '[DEMO] Escale avancée'),
-      ('d0000000-0000-4000-8000-000000000313'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0722', '2026-07-22 05:00:00+02'::timestamptz, '2026-07-22 12:00:00+02'::timestamptz, '[DEMO] Escale retardée'),
+      ('d0000000-0000-4000-8000-000000000313'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0722', '2026-07-22 07:00:00+02'::timestamptz, '2026-07-22 14:00:00+02'::timestamptz, '[DEMO] Escale retardée'),
       ('d0000000-0000-4000-8000-000000000314'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0723', '2026-07-23 13:00:00+02'::timestamptz, '2026-07-23 20:00:00+02'::timestamptz, '[DEMO] Départ retardé'),
       ('d0000000-0000-4000-8000-000000000315'::uuid, 'DEMO-002', 'CA-04-TOISES', 'DEMO-ROT-0724', '2026-07-24 13:00:00+02'::timestamptz, '2026-07-24 20:00:00+02'::timestamptz, '[DEMO] Haute charge'),
       ('d0000000-0000-4000-8000-000000000321'::uuid, 'DEMO-003', 'CA-01-CHEF-NAVIRE', 'DEMO-ROT-0720', '2026-07-20 05:30:00+02'::timestamptz, '2026-07-20 12:30:00+02'::timestamptz, '[DEMO] Cheffe habilitée'),
@@ -967,12 +981,12 @@ begin
     values
       ('d0000000-0000-4000-8000-000000000301'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0720', '2026-07-20 04:30:00+02'::timestamptz, '2026-07-20 11:30:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000302'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0721', '2026-07-21 13:00:00+02'::timestamptz, '2026-07-21 20:00:00+02'::timestamptz),
-      ('d0000000-0000-4000-8000-000000000303'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0722', '2026-07-22 05:00:00+02'::timestamptz, '2026-07-22 12:00:00+02'::timestamptz),
+      ('d0000000-0000-4000-8000-000000000303'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0722', '2026-07-22 07:00:00+02'::timestamptz, '2026-07-22 14:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000304'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0723', '2026-07-23 13:00:00+02'::timestamptz, '2026-07-23 20:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000305'::uuid, 'CA-03-GUICHETS', 'DEMO-ROT-0724', '2026-07-24 13:00:00+02'::timestamptz, '2026-07-24 20:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000311'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0720', '2026-07-20 04:30:00+02'::timestamptz, '2026-07-20 11:30:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000312'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0721', '2026-07-21 13:00:00+02'::timestamptz, '2026-07-21 20:00:00+02'::timestamptz),
-      ('d0000000-0000-4000-8000-000000000313'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0722', '2026-07-22 05:00:00+02'::timestamptz, '2026-07-22 12:00:00+02'::timestamptz),
+      ('d0000000-0000-4000-8000-000000000313'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0722', '2026-07-22 07:00:00+02'::timestamptz, '2026-07-22 14:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000314'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0723', '2026-07-23 13:00:00+02'::timestamptz, '2026-07-23 20:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000315'::uuid, 'CA-04-TOISES', 'DEMO-ROT-0724', '2026-07-24 13:00:00+02'::timestamptz, '2026-07-24 20:00:00+02'::timestamptz),
       ('d0000000-0000-4000-8000-000000000321'::uuid, 'CA-01-CHEF-NAVIRE', 'DEMO-ROT-0720', '2026-07-20 05:30:00+02'::timestamptz, '2026-07-20 12:30:00+02'::timestamptz),

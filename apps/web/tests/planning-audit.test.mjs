@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
+import { readAgentDetailSource } from './agent-detail-source.mjs';
+import { readPlanningEditorSource } from './planning-editor-source.mjs';
+import { readPlanningGridSource } from './planning-grid-source.mjs';
+
 const planningPages = [
   'src/app/tools/planning/besoins/page.tsx',
   'src/app/tools/planning/escales/page.tsx',
@@ -19,17 +23,14 @@ test('les écrans opérationnels permettent de choisir explicitement la zone', a
 });
 
 test('la couverture est calculée par créneau concurrent et non par somme journalière', async () => {
-  const source = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const source = await readPlanningGridSource();
 
   assert.match(source, /minimumConcurrentCoverage/);
   assert.match(
     source,
     /assignment\.staffing_requirement_id === requirement\.id/,
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
     /assignment\.port_call_id === requirement\.port_call_id/,
   );
@@ -37,11 +38,16 @@ test('la couverture est calculée par créneau concurrent et non par somme journ
   assert.doesNotMatch(source, /total \+ requirement\.required_agents/);
 });
 
-test('le calendrier opérationnel privilégie le brouillon éditable', async () => {
+test('le calendrier opérationnel privilégie la version publiée', async () => {
   const source = await readFile('src/app/tools/planning/page.tsx', 'utf8');
 
-  assert.match(source, /draftVersion \?\?/);
-  assert.match(source, /draftVersion \?\?\s+publishedVersion/);
+  assert.match(source, /params\.version === 'draft'/);
+  assert.match(
+    source,
+    /versionView === 'draft'[\s\S]*draftVersion \?\? publishedVersion[\s\S]*publishedVersion \?\? draftVersion/,
+  );
+  assert.match(source, /activeVersionId = displayedVersion\?\.id/);
+  assert.match(source, /Afficher le brouillon/);
 });
 
 test('la création manuelle des plannings a disparu du parcours', async () => {
@@ -82,11 +88,8 @@ test('les charges du corpus conservent le détail piétons, fret et autocars', a
   assert.match(source, /coach_count/);
 });
 
-test('la fiche agent sépare clairement les postes appréciés et interdits', async () => {
-  const page = await readFile(
-    'src/app/tools/planning/agents/[id]/page.tsx',
-    'utf8',
-  );
+test('la fiche agent garde les règles et le cycle RH dans des actions progressives', async () => {
+  const page = await readAgentDetailSource();
   const list = await readFile('src/app/tools/planning/agents/page.tsx', 'utf8');
   const quickActions = await readFile(
     'src/app/tools/planning/agents/agent-position-quick-actions.tsx',
@@ -101,7 +104,12 @@ test('la fiche agent sépare clairement les postes appréciés et interdits', as
   assert.match(page, /name="kind" type="hidden" value="restriction"/);
   assert.doesNotMatch(page, /htmlFor="ruleKind"|htmlFor="ruleLevel"/);
   assert.doesNotMatch(page, /\{preference\.level\}/);
-  assert.doesNotMatch(page, /Compétences|agentSkills|setAgentSkill/);
+  assert.match(page, /<details[^>]*>[\s\S]*Disponibilités/);
+  assert.match(page, /<details[^>]*>[\s\S]*Compétences/);
+  assert.match(page, /createAgentUnavailability/);
+  assert.match(page, /endAgentUnavailability/);
+  assert.match(page, /setAgentSkill/);
+  assert.match(page, /activeOn\(preference\.valid_from/);
   assert.match(list, /<AgentPositionQuickActions/);
   assert.match(quickActions, /Poste qu’il apprécie/);
   assert.match(quickActions, /Poste qu’il ne doit pas faire/);
@@ -112,10 +120,7 @@ test('la fiche agent sépare clairement les postes appréciés et interdits', as
 
 test('le planning reprend le corpus dans une vue uniquement hebdomadaire', async () => {
   const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
   const styles = await readFile(
     'src/components/weekly-planning-grid.module.css',
     'utf8',
@@ -130,7 +135,7 @@ test('le planning reprend le corpus dans une vue uniquement hebdomadaire', async
   assert.match(page, /name="date"/);
   assert.match(page, /className=\{styles\.dateForm\}/);
   assert.match(page, /href=\{adjacentWeekHref/);
-  assert.doesNotMatch(page, /<Link[\s\S]{0,160}href=\{adjacentWeekHref/);
+  assert.match(page, /<Link[\s\S]{0,180}href=\{adjacentWeekHref/);
   assert.doesNotMatch(
     page,
     /PlanningPeriodSelector|month\?:|from\?:|to\?:|period\?:/,
@@ -149,10 +154,7 @@ test('le planning reprend le corpus dans une vue uniquement hebdomadaire', async
 });
 
 test('l’éditeur explique les règles de repos et leurs erreurs', async () => {
-  const editor = await readFile(
-    'src/components/planning-assignment-editor.tsx',
-    'utf8',
-  );
+  const editor = await readPlanningEditorSource();
 
   assert.match(editor, /6 jours consécutifs maximum/);
   assert.match(editor, /11 h minimum/);
@@ -161,10 +163,7 @@ test('l’éditeur explique les règles de repos et leurs erreurs', async () => 
 });
 
 test('les affectations du brouillon se déplacent par glisser-déposer', async () => {
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
   const dnd = await readFile('src/components/planning-dnd.tsx', 'utf8');
   const styles = await readFile(
     'src/components/weekly-planning-grid.module.css',
@@ -196,12 +195,9 @@ test('les affectations du brouillon se déplacent par glisser-déposer', async (
 });
 
 test('la grille indexe les affectations, besoins et escales sans filtrage par case', async () => {
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
 
-  assert.match(grid, /assignmentsByCell = useMemo/);
+  assert.match(grid, /assignmentsByCell = useAssignmentsByCell/);
   assert.match(grid, /requirementsByCell/);
   assert.match(grid, /arrivalCallsByDay/);
   assert.match(grid, /departureCallsByDay/);
@@ -213,15 +209,46 @@ test('la grille indexe les affectations, besoins et escales sans filtrage par ca
   assert.doesNotMatch(grid, /onDragEnter|onDragLeave|onDragOver/);
 });
 
+test('le planning évite les recalculs et formatages coûteux à chaque case', async () => {
+  const grid = await readPlanningGridSource();
+
+  assert.match(grid, /dateFormatterByTimeZone/);
+  assert.match(grid, /timeFormatterByTimeZone/);
+  assert.match(grid, /coverageByRequirementId = useCoverageByRequirementId/);
+  assert.match(grid, /events\.push\(\s*\{ delta: 1/);
+  assert.doesNotMatch(grid, /relevant\.filter\([\s\S]{0,120}midpoint/);
+});
+
+test('la grille et le dialogue exposent une navigation clavier explicite', async () => {
+  const grid = await readPlanningGridSource();
+  const dnd = await readFile('src/components/planning-dnd.tsx', 'utf8');
+  const editor = await readPlanningEditorSource();
+
+  assert.match(grid, /role="table"/);
+  assert.match(grid, /tabIndex=\{0\}/);
+  assert.match(grid, /role="columnheader"/);
+  assert.match(grid, /role="rowheader"/);
+  assert.match(dnd, /role="cell"/);
+  assert.match(editor, /aria-modal="true"/);
+  assert.match(editor, /event\.key !== 'Tab'/);
+  assert.match(editor, /returnFocusRef/);
+});
+
+test('la liste collaborateurs est paginée et ne rend qu’une fiche détaillée', async () => {
+  const agents = await readFile(
+    'src/app/tools/planning/agents/page.tsx',
+    'utf8',
+  );
+
+  assert.match(agents, /AGENTS_PER_PAGE = 25/);
+  assert.match(agents, /paginatedAgents/);
+  assert.match(agents, /Pagination des collaborateurs/);
+  assert.match(agents, /params\.edit !== agent\.id/);
+});
+
 test('le calendrier permet l’édition manuelle complète sans quitter la semaine', async () => {
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
-  const editor = await readFile(
-    'src/components/planning-assignment-editor.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
+  const editor = await readPlanningEditorSource();
   const action = await readFile(
     'src/app/tools/planning/planning-editor-action.ts',
     'utf8',
@@ -245,14 +272,8 @@ test('le calendrier permet l’édition manuelle complète sans quitter la semai
 });
 
 test('le planning reste pilotable avec une équipe de 120 collaborateurs', async () => {
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
-  const editor = await readFile(
-    'src/components/planning-assignment-editor.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
+  const editor = await readPlanningEditorSource();
 
   assert.match(grid, /Retrouver un collaborateur/);
   assert.match(grid, /Rechercher un agent/);
@@ -261,26 +282,21 @@ test('le planning reste pilotable avec une équipe de 120 collaborateurs', async
   assert.match(grid, /Agents planifiés/);
   assert.match(grid, /missingAgentSlots/);
   assert.match(editor, /Rechercher par nom ou matricule/);
-  assert.match(editor, /eligibleAgents/);
-  assert.match(editor, /matchingAgents/);
-  assert.match(editor, /employee_number/);
-  assert.match(editor, /localeCompare/);
+  assert.match(editor, /candidateOptions/);
+  assert.match(editor, /findPlanningCandidateRecommendations/);
+  assert.match(editor, /agentSearchResults/);
+  assert.match(editor, /employeeNumber/);
+  assert.match(editor, /Recommandé/);
 });
 
 test('les changements de dernière minute restent visibles et traçables', async () => {
   const page = await readFile('src/app/tools/planning/page.tsx', 'utf8');
-  const editor = await readFile(
-    'src/components/planning-assignment-editor.tsx',
-    'utf8',
-  );
+  const editor = await readPlanningEditorSource();
   const editorAction = await readFile(
     'src/app/tools/planning/planning-editor-action.ts',
     'utf8',
   );
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
   const editableSchedule = await readFile(
     '../../supabase/migrations/202607200026_automatic_editable_schedule.sql',
     'utf8',
@@ -314,10 +330,7 @@ test('la page planning masque les commandes secondaires et le bruit nominal', as
     'src/app/tools/planning/planning-page.module.css',
     'utf8',
   );
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
   const gridStyles = await readFile(
     'src/components/weekly-planning-grid.module.css',
     'utf8',
@@ -375,10 +388,7 @@ test('la semaine peut être téléchargée dans un SVG autonome', async () => {
     'src/components/planning-export-button.tsx',
     'utf8',
   );
-  const grid = await readFile(
-    'src/components/weekly-planning-grid.tsx',
-    'utf8',
-  );
+  const grid = await readPlanningGridSource();
 
   assert.match(button, /Exporter en SVG/);
   assert.match(button, /XMLSerializer/);
@@ -427,29 +437,43 @@ test('une version de planning peut être téléchargée en Excel', async () => {
       planning.indexOf('<PlanningExportButton'),
   );
   assert.match(planning, /activeVersionId/);
+  assert.match(planning, /const activeVersionId = displayedVersion\?\.id/);
+  assert.doesNotMatch(
+    planning,
+    /publishedVersion \?\? draftVersion \?\? displayedVersion/,
+  );
   assert.match(planning, /excelExportHref/);
   assert.match(planning, /export\/week/);
   assert.match(versionRoute, /proxyPlanningExport/);
   assert.match(weekRoute, /planning\/export\.xlsx/);
   assert.match(controller, /@Get\('planning\/export\.xlsx'\)/);
   assert.match(
+    controller,
+    /@Throttle\(\{ default: \{ limit: 6, ttl: 60_000 \} \}\)/,
+  );
+  assert.match(
     response,
     /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/,
   );
+  assert.match(response, /AbortSignal\.timeout\(EXPORT_TIMEOUT_MS\)/);
+  assert.match(response, /MAX_EXPORT_BYTES/);
+  assert.match(response, /readLimitedBody/);
+  assert.match(response, /status: timeoutSignal\.aborted \? 504 : 502/);
 });
 
-test('le calendrier ne présente aucun workflow parallèle de replanification', async () => {
+test('les imprévus se traitent dans la semaine sans workflow parallèle', async () => {
   const planning = await readFile('src/app/tools/planning/page.tsx', 'utf8');
   const actions = await readFile('src/app/tools/planning/actions.ts', 'utf8');
 
   assert.match(planning, /Publier cette semaine/);
   assert.match(planning, /publishSchedule/);
-  assert.doesNotMatch(planning, /Horaires d’escale modifiés/);
-  assert.doesNotMatch(planning, /Appliquer au planning/);
-  assert.doesNotMatch(planning, /approveReplanningScenario/);
+  assert.match(planning, /Un imprévu à traiter/);
+  assert.match(planning, /approveReplanningScenario/);
+  assert.match(planning, /Le planning publié reste inchangé/);
   assert.doesNotMatch(planning, /scenarioHref/);
   assert.doesNotMatch(planning, /Ouvrir le brouillon/);
-  assert.doesNotMatch(actions, /approveReplanningScenario/);
+  assert.match(actions, /approveReplanningScenario/);
+  assert.match(actions, /replanning-scenarios\/\$\{scenarioId\}\/approve/);
   assert.doesNotMatch(actions, /\/tools\/planning\/replanification/);
   await assert.rejects(
     readFile('src/app/tools/planning/plannings/[id]/page.tsx', 'utf8'),

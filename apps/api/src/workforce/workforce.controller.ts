@@ -16,9 +16,12 @@ import { RequireRoles } from '../auth/require-roles.decorator';
 import { requireAuth } from '../common/require-auth';
 import {
   AddGroupMemberDto,
+  CreateAgentUnavailabilityDto,
   CreateGroupDto,
+  EndAgentUnavailabilityDto,
   EndGroupMembershipDto,
   GetHourBalanceQuery,
+  ListAgentUnavailabilityQuery,
   ListGroupsQuery,
   ListHourTargetsQuery,
   SetAgentContractDto,
@@ -208,6 +211,49 @@ export class WorkforceController {
     @Body() input: SetAgentSkillDto,
   ) {
     return this.workforce.setAgentSkill(requireAuth(auth), agentId, input);
+  }
+
+  @Get('agents/:id/unavailability')
+  listAgentUnavailability(
+    @CurrentAuth() auth: AuthIdentity | undefined,
+    @Param('id', ParseUUIDPipe) agentId: string,
+    @Query() query: ListAgentUnavailabilityQuery,
+  ) {
+    return this.workforce.listAgentUnavailability(
+      requireAuth(auth).accessToken,
+      agentId,
+      query,
+    );
+  }
+
+  @Post('agents/:id/unavailability')
+  @RequireRoles('platform_admin', 'planning_admin', 'planner', 'hr')
+  createAgentUnavailability(
+    @CurrentAuth() auth: AuthIdentity | undefined,
+    @Param('id', ParseUUIDPipe) agentId: string,
+    @Body() input: CreateAgentUnavailabilityDto,
+  ) {
+    return this.workforce.createAgentUnavailability(
+      requireAuth(auth),
+      agentId,
+      input,
+    );
+  }
+
+  @Patch('agents/:id/unavailability/:unavailabilityId/end')
+  @RequireRoles('platform_admin', 'planning_admin', 'planner', 'hr')
+  endAgentUnavailability(
+    @CurrentAuth() auth: AuthIdentity | undefined,
+    @Param('id', ParseUUIDPipe) agentId: string,
+    @Param('unavailabilityId', ParseUUIDPipe) unavailabilityId: string,
+    @Body() input: EndAgentUnavailabilityDto,
+  ) {
+    return this.workforce.endAgentUnavailability(
+      requireAuth(auth).accessToken,
+      agentId,
+      unavailabilityId,
+      input,
+    );
   }
 
   @Get('positions/:id/skills')

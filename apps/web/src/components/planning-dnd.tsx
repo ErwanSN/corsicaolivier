@@ -12,6 +12,7 @@ type PlanningDropCellProps = Readonly<{
   children: ReactNode;
   className: string;
   disabled: boolean;
+  label: string;
   positionId: string;
   workDate: string;
 }>;
@@ -20,6 +21,7 @@ type PlanningDraggableAssignmentProps = Readonly<{
   agentName: string;
   children: ReactNode;
   dragDisabled: boolean;
+  draggable: boolean;
   editDisabled: boolean;
   editable: boolean;
   id: string;
@@ -31,6 +33,7 @@ export function PlanningDropCell({
   children,
   className,
   disabled,
+  label,
   positionId,
   workDate,
 }: PlanningDropCellProps) {
@@ -42,8 +45,10 @@ export function PlanningDropCell({
 
   return (
     <div
+      aria-label={label}
       className={`${className} ${isOver ? styles.dropTargetActive : ''}`}
       ref={setNodeRef}
+      role="cell"
     >
       {children}
     </div>
@@ -54,6 +59,7 @@ export function PlanningDraggableAssignment({
   agentName,
   children,
   dragDisabled,
+  draggable,
   editDisabled,
   editable,
   id,
@@ -64,13 +70,13 @@ export function PlanningDraggableAssignment({
     useDraggable({
       id: `${ASSIGNMENT_DND_PREFIX}${id}`,
       data: { assignmentId: id },
-      disabled: dragDisabled || !editable,
+      disabled: dragDisabled || !draggable,
     });
 
   return (
     <article
       className={`${styles.assignment} ${
-        editable ? styles.draggableAssignment : ''
+        draggable ? styles.draggableAssignment : ''
       } ${isDragging ? styles.draggingAssignment : ''} ${
         searchState === 'match'
           ? styles.searchMatch
@@ -95,7 +101,7 @@ export function PlanningDraggableAssignment({
       >
         {children}
       </button>
-      {editable ? (
+      {draggable ? (
         <button
           {...attributes}
           {...listeners}

@@ -1,4 +1,4 @@
-import type { AppRole } from '../database/database.types';
+import type { AppRole } from '../database/database.aliases';
 
 export type AuthIdentity = Readonly<{
   accessToken: string;

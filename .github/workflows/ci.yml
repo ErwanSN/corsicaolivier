@@ -13,37 +13,226 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  codeql:
+    name: CodeQL JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        with:
+          languages: javascript-typescript
+      - run: pnpm build
+      - uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+
+  repository-security:
+    name: Secrets, dependencies and configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Reject new personal-data history
+        run: node scripts/git-history-privacy.mjs
+      # v0.36.0 is pinned by commit; Trivy itself is held to the known-safe,
+      # immutable v0.69.3 release after GHSA-69fq-xp46-6x23.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          version: v0.69.3
+          trivyignores: .trivyignore.yaml
+
   application:
     name: Application quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm security:audit
       - run: pnpm format:check
       - run: pnpm check
       - run: pnpm build
-      - run: pnpm security:audit
 
   database:
     name: PostgreSQL and RLS migrations
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:start
       - run: pnpm db:reset
+      - run: pnpm db:types:check
       - run: pnpm db:lint
+      - run: pnpm db:test
       - if: always()
         run: pnpm db:stop
+
+  browser:
+    name: Chromium browser journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @corsica/planning-web exec playwright install --with-deps chromium
+      - name: Run deterministic mock journeys
+        run: pnpm test:e2e
+      - name: Start local Supabase
+        run: pnpm db:start
+      - name: Reset local Supabase schema
+        run: pnpm db:reset
+      - name: Provision ephemeral local Auth and TOTP account
+        env:
+          E2E_AUTH_STATE_FILE: ${{ runner.temp }}/corsica-real-auth-state.json
+        run: pnpm --filter @corsica/planning-web exec node e2e/support/ci-real-auth.mjs provision
+      - name: Run the real local Auth journey only
+        run: pnpm --filter @corsica/planning-web run test:e2e:real-auth
+      - name: Delete the ephemeral local Auth account
+        if: always()
+        env:
+          E2E_AUTH_STATE_FILE: ${{ runner.temp }}/corsica-real-auth-state.json
+        run: pnpm --filter @corsica/planning-web exec node e2e/support/ci-real-auth.mjs cleanup
+      - name: Stop local Supabase
+        if: always()
+        run: pnpm db:stop
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-failure-artifacts
+          path: apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  containers:
+    name: Production containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Validate deployment composition
+        env:
+          SUPABASE_INTERNAL_URL: http://corsica-supabase:8000
+          SUPABASE_API_NETWORK: corsica-supabase-api-ci
+          SUPABASE_AUTH_INTERNAL_URL: http://supabase-auth:9999
+          SUPABASE_AUTH_NETWORK: corsica-auth-backplane-ci
+          SUPABASE_AUTH_RATE_LIMIT_SECRET: Y2ktb25seS1yYXRlLWxpbWl0LXNlY3JldC0wMDAwMDAwMDA
+          SUPABASE_PUBLIC_URL: https://supabase.example.invalid
+          SUPABASE_PUBLISHABLE_KEY: publishable_ci_only
+          SUPABASE_SERVICE_ROLE_KEY: service_role_ci_only
+          WEB_PUBLIC_URL: https://corsica.example.invalid
+        run: docker compose -f docker-compose.coolify.yml config --quiet
+      - name: Build API image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: corsica-api:ci
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Build web image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          load: true
+          tags: corsica-web:ci
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.invalid
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=publishable_ci_only
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Verify runtime container hardening
+        run: |
+          test "$(docker image inspect corsica-api:ci --format '{{.Config.User}}')" = nestjs
+          test "$(docker image inspect corsica-web:ci --format '{{.Config.User}}')" = nextjs
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,noexec,nosuid,uid=1001,gid=1001,mode=1777,size=16m \
+            --entrypoint sh corsica-api:ci -eu -c \
+            'test "$(id -u)" = 1001; test "$(id -g)" = 1001; ! command -v npm; test ! -e node_modules/supabase; test ! -e node_modules/typescript; ! touch /app/.write-probe 2>/dev/null; touch /tmp/write-probe'
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,noexec,nosuid,uid=1001,gid=1001,mode=1777,size=16m \
+            --tmpfs /app/apps/web/.next/cache:rw,noexec,nosuid,uid=1001,gid=1001,mode=0750,size=16m \
+            --entrypoint sh corsica-web:ci -eu -c \
+            'test "$(id -u)" = 1001; test "$(id -g)" = 1001; ! command -v npm; ! touch /app/.write-probe 2>/dev/null; touch /tmp/write-probe; touch /app/apps/web/.next/cache/write-probe'
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: corsica-api:ci
+          scanners: vuln,secret
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          version: v0.69.3
+      - name: Scan web image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: corsica-web:ci
+          scanners: vuln,secret
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          version: v0.69.3
+      - name: Generate API SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: corsica-api:ci
+          artifact-name: corsica-api.spdx.json
+          upload-release-assets: false
+      - name: Generate web SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: corsica-web:ci
+          artifact-name: corsica-web.spdx.json
+          upload-release-assets: false

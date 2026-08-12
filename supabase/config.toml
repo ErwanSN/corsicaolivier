@@ -1,4 +1,4 @@
-project_id = "olivier-tools-panel"
+project_id = "corsica-planning"
 
 [api]
 enabled = true
@@ -28,6 +28,13 @@ jwt_expiry = 3600
 enable_signup = false
 
 [auth.email]
-enable_signup = false
+enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true

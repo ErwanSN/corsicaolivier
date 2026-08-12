@@ -24,10 +24,40 @@ type EscalesPageProps = Readonly<{
     add?: string;
     call?: string;
     error?: string;
+    from?: string;
+    page?: string;
+    q?: string;
     saved?: string;
     site?: string;
+    status?: string;
+    to?: string;
   }>;
 }>;
+
+type PortCallSearchPage = Readonly<{
+  items: PortCall[];
+  included: PortCall[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}>;
+
+type EscalesHrefOptions = Readonly<{
+  add?: string;
+  call?: string;
+  from?: string;
+  page?: number;
+  query?: string;
+  siteId: string;
+  status?: PortCall['status'];
+  to?: string;
+}>;
+
+const CALLS_PER_PAGE = 25;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const statusLabels: Record<PortCall['status'], string> = {
   scheduled: 'Planifiée',
@@ -37,6 +67,35 @@ const statusLabels: Record<PortCall['status'], string> = {
   departed: 'Partie',
   cancelled: 'Annulée',
 };
+
+function validDate(value: string | undefined): string | undefined {
+  if (!value || !DATE_PATTERN.test(value)) return undefined;
+  const instant = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(instant.getTime()) &&
+    instant.toISOString().slice(0, 10) === value
+    ? value
+    : undefined;
+}
+
+function addUtcDays(value: string, amount: number): string {
+  const instant = new Date(`${value}T00:00:00.000Z`);
+  instant.setUTCDate(instant.getUTCDate() + amount);
+  return instant.toISOString().slice(0, 10);
+}
+
+function escalesHref(options: EscalesHrefOptions): string {
+  const params = new URLSearchParams({ site: options.siteId });
+  if (options.query) params.set('q', options.query);
+  if (options.status) params.set('status', options.status);
+  if (options.from) params.set('from', options.from);
+  if (options.to) params.set('to', options.to);
+  if (options.page && options.page > 1) {
+    params.set('page', String(options.page));
+  }
+  if (options.call) params.set('call', options.call);
+  if (options.add) params.set('add', options.add);
+  return `/tools/planning/escales?${params.toString()}`;
+}
 
 function formatDate(value: string | null, timeZone: string): string {
   if (!value) return '—';
@@ -135,11 +194,45 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
   const sitesResult = await apiFetch<Site[]>('/sites');
   const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
+  const query = params.q?.trim().slice(0, 100) ?? '';
+  const status = Object.hasOwn(statusLabels, params.status ?? '')
+    ? (params.status as PortCall['status'])
+    : undefined;
+  const requestedFrom = validDate(params.from);
+  const requestedTo = validDate(params.to);
+  const dateWindowIsValid = !(
+    requestedFrom &&
+    requestedTo &&
+    (requestedFrom > requestedTo ||
+      new Date(`${addUtcDays(requestedTo, 1)}T00:00:00.000Z`).getTime() -
+        new Date(`${requestedFrom}T00:00:00.000Z`).getTime() >
+        366 * 24 * 60 * 60 * 1_000)
+  );
+  const from = dateWindowIsValid ? requestedFrom : undefined;
+  const to = dateWindowIsValid ? requestedTo : undefined;
+  const parsedPage = Number.parseInt(params.page ?? '1', 10);
+  const requestedPage = Number.isFinite(parsedPage)
+    ? Math.max(1, parsedPage)
+    : 1;
+  const callSearch = site
+    ? new URLSearchParams({
+        page: String(requestedPage),
+        pageSize: String(CALLS_PER_PAGE),
+        siteId: site.id,
+      })
+    : null;
+  if (query) callSearch?.set('q', query);
+  if (status) callSearch?.set('status', status);
+  if (from) callSearch?.set('from', `${from}T00:00:00.000Z`);
+  if (to) {
+    callSearch?.set('to', `${addUtcDays(to, 1)}T00:00:00.000Z`);
+  }
+  if (params.call && UUID_PATTERN.test(params.call)) {
+    callSearch?.set('includeId', params.call);
+  }
   const [callsResult, profilesResult, vesselsResult] = site
     ? await Promise.all([
-        apiFetch<PortCall[]>(
-          `/port-calls?siteId=${encodeURIComponent(site.id)}`,
-        ),
+        apiFetch<PortCallSearchPage>(`/port-calls/search?${callSearch}`),
         apiFetch<DemandProfile[]>(
           `/demand-profiles?siteId=${encodeURIComponent(site.id)}`,
         ),
@@ -148,24 +241,41 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
         ),
       ])
     : [
-        { data: [] as PortCall[], error: sitesResult.error },
+        { data: null as PortCallSearchPage | null, error: sitesResult.error },
         { data: [] as DemandProfile[], error: sitesResult.error },
         { data: [] as Vessel[], error: sitesResult.error },
       ];
-  const calls = callsResult.data ?? [];
+  const pageData = callsResult.data;
+  const calls = pageData?.items ?? [];
   const profiles = profilesResult.data ?? [];
   const vessels = vesselsResult.data ?? [];
   const vesselById = new Map(vessels.map((vessel) => [vessel.id, vessel]));
   const selected = params.call
-    ? calls.find((call) => call.id === params.call)
+    ? [...calls, ...(pageData?.included ?? [])].find(
+        (call) => call.id === params.call,
+      )
     : undefined;
+  const currentPage = pageData?.page ?? requestedPage;
+  const pageCount = pageData?.totalPages ?? 1;
+  const resultCount = pageData?.total ?? 0;
+  const pageStart = (currentPage - 1) * (pageData?.pageSize ?? CALLS_PER_PAGE);
   const forecastsResult = selected
     ? await apiFetch<LoadForecast[]>(
         `/load-forecasts?portCallId=${encodeURIComponent(selected.id)}`,
       )
     : { data: [] as LoadForecast[], error: null };
   const forecasts = forecastsResult.data ?? [];
-
+  const effectiveForecast = forecasts[0] ?? null;
+  const view = site
+    ? {
+        from,
+        page: currentPage,
+        query,
+        siteId: site.id,
+        status,
+        to,
+      }
+    : null;
   return (
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
@@ -185,7 +295,11 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
           </Link>
           <Link
             className="primary-button"
-            href={`?site=${site?.id ?? ''}&add=call`}
+            href={
+              view
+                ? escalesHref({ ...view, add: 'call' })
+                : '/tools/planning/escales'
+            }
           >
             Ajouter une escale
           </Link>
@@ -210,7 +324,18 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
           role="alert"
         >
-          L’opération a échoué. Vérifiez les valeurs et vos habilitations.
+          {params.error === 'forecast-conflict'
+            ? 'La charge a changé entre-temps. Rechargez l’escale avant de corriger.'
+            : 'L’opération a échoué. Vérifiez les valeurs et vos habilitations.'}
+        </p>
+      ) : null}
+      {!dateWindowIsValid ? (
+        <p
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="alert"
+        >
+          La période doit être chronologique et ne peut pas dépasser un an. Les
+          dates ont été ignorées.
         </p>
       ) : null}
 
@@ -262,7 +387,11 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
             <div className="flex gap-3 md:col-span-2 xl:col-span-4 xl:justify-end">
               <Link
                 className="secondary-button"
-                href={`/tools/planning/escales?site=${site.id}`}
+                href={
+                  view
+                    ? escalesHref({ ...view, add: undefined })
+                    : `/tools/planning/escales?site=${site.id}`
+                }
               >
                 Annuler
               </Link>
@@ -278,6 +407,95 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Certains flux maritimes ne sont pas disponibles.
         </p>
+      ) : null}
+
+      {site ? (
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <form
+            className="flex flex-col gap-3 border-b border-zinc-200 p-4 sm:flex-row sm:flex-wrap"
+            method="get"
+          >
+            <input name="site" type="hidden" value={site.id} />
+            <label className="sr-only" htmlFor="portCallSearch">
+              Rechercher une escale
+            </label>
+            <input
+              className="field-input min-w-0 flex-1"
+              defaultValue={query}
+              id="portCallSearch"
+              maxLength={100}
+              name="q"
+              placeholder="Référence d’escale"
+            />
+            <label className="sr-only" htmlFor="portCallStatus">
+              État de l’escale
+            </label>
+            <PlatformSelect
+              className="field-input sm:w-44"
+              defaultValue={status ?? ''}
+              id="portCallStatus"
+              name="status"
+            >
+              <option value="">Tous les états</option>
+              {Object.entries(statusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </PlatformSelect>
+            <button className="secondary-button" type="submit">
+              Rechercher
+            </button>
+            <details
+              className="w-full text-sm text-zinc-600"
+              open={Boolean(from || to)}
+            >
+              <summary className="w-fit cursor-pointer font-medium hover:text-zinc-950">
+                Filtrer par période
+              </summary>
+              <div className="mt-3 flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-end">
+                <Field label="Du">
+                  <input
+                    className="field-input"
+                    defaultValue={from}
+                    name="from"
+                    type="date"
+                  />
+                </Field>
+                <Field label="Au">
+                  <input
+                    className="field-input"
+                    defaultValue={to}
+                    name="to"
+                    type="date"
+                  />
+                </Field>
+                {from || to ? (
+                  <Link
+                    className="secondary-button"
+                    href={escalesHref({
+                      query,
+                      siteId: site.id,
+                      status,
+                    })}
+                  >
+                    Effacer les dates
+                  </Link>
+                ) : null}
+              </div>
+            </details>
+          </form>
+          {resultCount ? (
+            <p aria-live="polite" className="px-4 py-2 text-xs text-zinc-600">
+              {pageStart + 1}–
+              {Math.min(
+                pageStart + (pageData?.pageSize ?? CALLS_PER_PAGE),
+                resultCount,
+              )}{' '}
+              sur {resultCount} escale{resultCount > 1 ? 's' : ''}
+            </p>
+          ) : null}
+        </section>
       ) : null}
 
       <div
@@ -312,7 +530,11 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                       <td className="px-5 py-4 font-medium">
                         <Link
                           className="hover:text-red-700"
-                          href={`?site=${site?.id ?? ''}&call=${call.id}`}
+                          href={
+                            view
+                              ? escalesHref({ ...view, call: call.id })
+                              : '/tools/planning/escales'
+                          }
                         >
                           {call.external_reference ?? call.id.slice(0, 8)}
                         </Link>
@@ -343,7 +565,11 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                       <td className="px-5 py-4">
                         <Link
                           className="font-semibold text-red-700 hover:text-red-800"
-                          href={`?site=${site?.id ?? ''}&call=${call.id}`}
+                          href={
+                            view
+                              ? escalesHref({ ...view, call: call.id })
+                              : '/tools/planning/escales'
+                          }
                         >
                           Modifier les heures →
                         </Link>
@@ -355,9 +581,41 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
             </div>
           ) : (
             <p className="p-12 text-center text-sm text-zinc-500">
-              Aucune escale chargée.
+              Aucune escale ne correspond à cette recherche.
             </p>
           )}
+          {pageCount > 1 && view ? (
+            <nav
+              aria-label="Pagination des escales"
+              className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-4 py-3"
+            >
+              {currentPage > 1 ? (
+                <Link
+                  className="secondary-button"
+                  href={escalesHref({ ...view, page: currentPage - 1 })}
+                  rel="prev"
+                >
+                  ← Précédentes
+                </Link>
+              ) : (
+                <span />
+              )}
+              <span className="order-first w-full text-center text-sm text-zinc-600 sm:order-none sm:w-auto">
+                Page {currentPage} sur {pageCount}
+              </span>
+              {currentPage < pageCount ? (
+                <Link
+                  className="secondary-button"
+                  href={escalesHref({ ...view, page: currentPage + 1 })}
+                  rel="next"
+                >
+                  Suivantes →
+                </Link>
+              ) : (
+                <span />
+              )}
+            </nav>
+          ) : null}
         </section>
 
         {site && selected ? (
@@ -376,7 +634,11 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                 </div>
                 <Link
                   className="text-sm font-medium text-zinc-500 hover:text-zinc-950"
-                  href={`/tools/planning/escales?site=${site.id}`}
+                  href={
+                    view
+                      ? escalesHref({ ...view, call: undefined })
+                      : `/tools/planning/escales?site=${site.id}`
+                  }
                 >
                   Fermer
                 </Link>
@@ -387,6 +649,16 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                 key={selected.id}
               >
                 <ScopeFields callId={selected.id} site={site} />
+                <input
+                  name="expectedCurrentSourceRevision"
+                  type="hidden"
+                  value={selected.source_revision ?? ''}
+                />
+                <input
+                  name="expectedTimingLockVersion"
+                  type="hidden"
+                  value={selected.timing_lock_version}
+                />
                 <div className="border-b border-zinc-200 pb-3">
                   <h3 className="font-semibold">Modifier les heures</h3>
                   <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -442,6 +714,36 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                     ))}
                   </PlatformSelect>
                 </Field>
+                <Field label="Motif de la correction">
+                  <input
+                    className="field-input"
+                    maxLength={500}
+                    minLength={3}
+                    name="reason"
+                    placeholder="Ex. retard confirmé par l’exploitation"
+                    required
+                  />
+                </Field>
+                <details className="rounded-xl border border-zinc-200 p-3 text-sm">
+                  <summary className="cursor-pointer font-medium text-zinc-700">
+                    Durée de la correction
+                  </summary>
+                  <div className="mt-3">
+                    <Field label="Valable jusqu’à">
+                      <input
+                        className="field-input"
+                        name="validUntil"
+                        step="60"
+                        type="datetime-local"
+                      />
+                    </Field>
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      Laissez vide pour deux heures. La durée autorisée va de 5
+                      minutes à 24 heures, puis le flux maritime peut reprendre
+                      la main.
+                    </p>
+                  </div>
+                </details>
                 <p className="text-xs leading-5 text-zinc-500">
                   Le départ doit rester postérieur à l’arrivée. Toute
                   modification met automatiquement à jour les impacts sur le
@@ -487,24 +789,49 @@ export default async function EscalesPage({ searchParams }: EscalesPageProps) {
                   className="mt-5 grid grid-cols-2 gap-3 border-t border-zinc-100 pt-5"
                 >
                   <ScopeFields callId={selected.id} site={site} />
+                  <input
+                    name="expectedEffectiveForecastId"
+                    type="hidden"
+                    value={effectiveForecast?.id ?? ''}
+                  />
                   <NumberField label="Passagers" name="passengerCount" />
                   <NumberField label="Dont piétons" name="passengerQuota" />
                   <NumberField label="Véhicules" name="vehicleCount" />
                   <NumberField label="Fret" name="freightUnitCount" />
                   <NumberField label="Autocars" name="coachCount" />
+                  <label className="col-span-2 text-sm font-medium text-zinc-700">
+                    {effectiveForecast
+                      ? 'Motif de la correction temporaire (2 h)'
+                      : 'Motif de la saisie initiale'}
+                    <input
+                      className="field mt-1"
+                      maxLength={500}
+                      minLength={3}
+                      name="reason"
+                      placeholder="Ex. comptage terrain actualisé"
+                      required
+                    />
+                  </label>
                   <button className="secondary-button col-span-2" type="submit">
-                    Enregistrer la charge
+                    {effectiveForecast
+                      ? 'Appliquer pendant 2 h'
+                      : 'Enregistrer la charge initiale'}
                   </button>
                 </form>
 
-                {forecasts.length ? (
+                {effectiveForecast ? (
                   <p className="mt-4 text-xs text-zinc-500">
-                    Dernière prévision : {forecasts[0].passenger_count}{' '}
-                    passagers · {forecasts[0].passenger_quota ?? 0} piétons ·{' '}
-                    {forecasts[0].vehicle_count} véhicules ·{' '}
-                    {forecasts[0].freight_unit_count} unités fret ·{' '}
-                    {forecasts[0].coach_count} autocars ·{' '}
-                    {formatDate(forecasts[0].received_at, site.timezone)}
+                    Prévision effective : {effectiveForecast.passenger_count}{' '}
+                    passagers · {effectiveForecast.passenger_quota ?? 0} piétons
+                    · {effectiveForecast.vehicle_count} véhicules ·{' '}
+                    {effectiveForecast.freight_unit_count} unités fret ·{' '}
+                    {effectiveForecast.coach_count} autocars · source{' '}
+                    {effectiveForecast.source} n°
+                    {effectiveForecast.source_sequence} du{' '}
+                    {formatDate(
+                      effectiveForecast.source_received_at,
+                      site.timezone,
+                    )}
                   </p>
                 ) : null}
                 {forecastsResult.error ? (

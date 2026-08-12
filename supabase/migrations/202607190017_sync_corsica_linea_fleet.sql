@@ -1,3 +1,29 @@
+-- Structural referential data required from here on. It previously lived only in
+-- supabase/seed.sql, but Supabase applies every migration before the seed, so this
+-- migration and 202607190019 aborted on a clean database. The identifiers match
+-- seed.sql, which stays idempotent.
+insert into public.organizations (id, slug, name)
+values ('00000000-0000-4000-8000-000000000001', 'corsica-linea', 'Corsica Linea')
+on conflict (id) do nothing;
+
+insert into public.sites (id, organization_id, code, name, timezone)
+values
+  (
+    '00000000-0000-4000-8000-000000000101',
+    '00000000-0000-4000-8000-000000000001',
+    'MRS-JOL',
+    'Marseille Joliette',
+    'Europe/Paris'
+  ),
+  (
+    '00000000-0000-4000-8000-000000000102',
+    '00000000-0000-4000-8000-000000000001',
+    'MRS-JAN',
+    'Marseille Janet',
+    'Europe/Paris'
+  )
+on conflict (id) do nothing;
+
 do $$
 declare
   corsica_organization_id uuid;

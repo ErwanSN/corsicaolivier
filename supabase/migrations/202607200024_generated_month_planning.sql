@@ -14,13 +14,15 @@ declare
 begin
   select app_user.id into actor_id
   from public.app_users app_user
-  where lower(app_user.email) = 'otourre@corsicalinea.com'
+  where lower(app_user.email) = 'demo.operator@example.invalid'
     and app_user.status = 'active'
   order by app_user.created_at
   limit 1;
 
+  -- Same rule as the demo scenarios: without the demo owner there is nothing
+  -- to generate, and the migration must still succeed.
   if actor_id is null then
-    raise exception 'The Olivier demo owner account is required before generating the monthly planning';
+    return;
   end if;
 
   select profile.id into profile_id
@@ -32,7 +34,7 @@ begin
   limit 1;
 
   if profile_id is null then
-    raise exception 'The demo demand profile is required before generating the monthly planning';
+    return;
   end if;
 
   if not exists (
@@ -41,7 +43,7 @@ begin
     where vessel.organization_id = organization_id
       and vessel.active = true
   ) then
-    raise exception 'At least one active vessel is required before generating the monthly planning';
+    return;
   end if;
 
   perform set_config('request.jwt.claim.sub', actor_id::text, true);

@@ -16,6 +16,7 @@ import { requireAuth } from '../common/require-auth';
 import {
   CreatePortCallDto,
   ListPortCallsQuery,
+  SearchPortCallsQuery,
   SetDemandProfileDto,
   UpdatePortCallTimingDto,
 } from './port-call.dto';
@@ -30,7 +31,15 @@ export class PortCallsController {
     @CurrentAuth() auth: AuthIdentity | undefined,
     @Query() query: ListPortCallsQuery,
   ) {
-    return this.portCalls.list(requireAuth(auth).accessToken, query.siteId);
+    return this.portCalls.list(requireAuth(auth).accessToken, query);
+  }
+
+  @Get('search')
+  search(
+    @CurrentAuth() auth: AuthIdentity | undefined,
+    @Query() query: SearchPortCallsQuery,
+  ) {
+    return this.portCalls.search(requireAuth(auth).accessToken, query);
   }
 
   @Post()
@@ -43,7 +52,7 @@ export class PortCallsController {
   }
 
   @Patch(':id/timing')
-  @RequireRoles('platform_admin', 'planning_admin', 'planner')
+  @RequireRoles('platform_admin', 'planning_admin', 'approver')
   updateTiming(
     @CurrentAuth() auth: AuthIdentity | undefined,
     @Param('id', ParseUUIDPipe) id: string,

@@ -7,7 +7,7 @@ import { apiFetch } from '../../../../lib/api/server';
 import type {
   DemandProfile,
   DemandProfileLine,
-  Position,
+  PositionSearchPage,
   Site,
 } from '../../../../lib/api/types';
 import { orderSites } from '../../../../lib/sites';
@@ -45,16 +45,16 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
         apiFetch<DemandProfile[]>(
           `/demand-profiles?siteId=${encodeURIComponent(site.id)}`,
         ),
-        apiFetch<Position[]>(
-          `/positions?organizationId=${encodeURIComponent(site.organization_id)}&siteId=${encodeURIComponent(site.id)}`,
+        apiFetch<PositionSearchPage>(
+          `/positions?organizationId=${encodeURIComponent(site.organization_id)}&siteId=${encodeURIComponent(site.id)}&pageSize=200`,
         ),
       ])
     : [
         { data: [] as DemandProfile[], error: sitesResult.error },
-        { data: [] as Position[], error: sitesResult.error },
+        { data: null, error: sitesResult.error },
       ];
   const profiles = profilesResult.data ?? [];
-  const positions = positionsResult.data ?? [];
+  const positions = positionsResult.data?.items ?? [];
   const selected =
     profiles.find((profile) => profile.id === params.profile) ?? profiles.at(0);
   const linesResult = selected
@@ -171,6 +171,13 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
           Certaines données de dimensionnement ne sont pas disponibles.
         </p>
       ) : null}
+      {positionsResult.data?.hasMore ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Les 200 premiers postes sont proposés ici sur{' '}
+          {positionsResult.data.total}. Utilisez la recherche des réglages pour
+          retrouver les suivants.
+        </p>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -272,18 +279,37 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
                   name="maximumAgents"
                   required={false}
                 />
-                <NumberInput
-                  label="Passagers / agent en plus"
-                  min="1"
-                  name="passengersPerExtraAgent"
-                  required={false}
-                />
-                <NumberInput
-                  label="Véhicules / agent en plus"
-                  min="1"
-                  name="vehiclesPerExtraAgent"
-                  required={false}
-                />
+                <details className="rounded-xl border border-zinc-200 p-4 md:col-span-2 xl:col-span-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-zinc-700">
+                    Adapter l’effectif à la charge (optionnel)
+                  </summary>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <NumberInput
+                      label="Passagers / agent"
+                      min="1"
+                      name="passengersPerExtraAgent"
+                      required={false}
+                    />
+                    <NumberInput
+                      label="Véhicules / agent"
+                      min="1"
+                      name="vehiclesPerExtraAgent"
+                      required={false}
+                    />
+                    <NumberInput
+                      label="Unités fret / agent"
+                      min="1"
+                      name="freightUnitsPerExtraAgent"
+                      required={false}
+                    />
+                    <NumberInput
+                      label="Autocars / agent"
+                      min="1"
+                      name="coachesPerExtraAgent"
+                      required={false}
+                    />
+                  </div>
+                </details>
                 <div className="flex items-end xl:col-span-3 xl:justify-end">
                   <button className="primary-button" type="submit">
                     Ajouter la règle
@@ -335,6 +361,12 @@ export default async function BesoinsPage({ searchParams }: BesoinsPageProps) {
                               : '—'}
                             {line.vehicles_per_extra_agent
                               ? ` · +1 / ${line.vehicles_per_extra_agent} véhicules`
+                              : ''}
+                            {line.freight_units_per_extra_agent
+                              ? ` · +1 / ${line.freight_units_per_extra_agent} unités fret`
+                              : ''}
+                            {line.coaches_per_extra_agent
+                              ? ` · +1 / ${line.coaches_per_extra_agent} autocars`
                               : ''}
                           </td>
                         </tr>

@@ -5,7 +5,12 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', '*.config.*'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      '*.config.*',
+      'src/database/database.types.ts',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

@@ -49,7 +49,7 @@ export function AgentPositionQuickActions({
   siteId,
   validFrom,
 }: AgentPositionQuickActionsProps) {
-  const detailHref = `/tools/planning/agents/${agentId}#affectation-postes`;
+  const detailHref = `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}#affectation-postes`;
 
   return (
     <section className="border-t border-zinc-200 bg-white p-5">

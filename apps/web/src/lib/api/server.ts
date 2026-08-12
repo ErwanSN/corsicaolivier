@@ -19,11 +19,16 @@ export async function apiFetch<T>(
   }
 
   const apiUrl = process.env.API_URL ?? 'http://localhost:3001';
+  const timeoutSignal = AbortSignal.timeout(10_000);
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
 
   try {
     const response = await fetch(new URL(`/api${path}`, apiUrl), {
       ...init,
       cache: 'no-store',
+      signal,
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${data.session.access_token}`,

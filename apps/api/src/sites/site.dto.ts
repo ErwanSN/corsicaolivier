@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsTimeZone,
+  IsUUID,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class CreateSiteDto {
   @IsUUID()
@@ -14,6 +21,7 @@ export class CreateSiteDto {
 
   @IsOptional()
   @IsString()
+  @IsTimeZone()
   @Length(1, 64)
   declare timezone?: string;
 }

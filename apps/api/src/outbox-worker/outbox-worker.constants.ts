@@ -1,0 +1,21 @@
+export const OUTBOX_POLL_INTERVAL_MS = 5_000;
+export const OUTBOX_BATCH_SIZE = 10;
+export const OUTBOX_LEASE_SECONDS = 120;
+export const OUTBOX_RPC_TIMEOUT_MS = 15_000;
+export const OUTBOX_HEALTH_MAX_AGE_MS = 180_000;
+export const OUTBOX_MAINTENANCE_INTERVAL_MS = 6 * 60 * 60 * 1_000;
+export const OUTBOX_RETENTION_DAYS = 90;
+export const OUTBOX_PRUNE_BATCH_SIZE = 5_000;
+export const OUTBOX_MAX_PRUNE_BATCHES = 20;
+export const WORKFORCE_RECONCILIATION_BATCH_SIZE = 500;
+export const WORKFORCE_MAX_RECONCILIATION_BATCHES = 10;
+export const AGENT_OFFBOARDING_RECONCILIATION_BATCH_SIZE = 100;
+export const AGENT_OFFBOARDING_MAX_RECONCILIATION_BATCHES = 5;
+export const AGENT_OFFBOARDING_RECONCILIATION_INTERVAL_MS = 60_000;
+export const LOAD_FORECAST_RECONCILIATION_INTERVAL_MS = 60_000;
+export const LOAD_FORECAST_RECONCILIATION_BATCH_SIZE = 100;
+export const LOAD_FORECAST_MAX_RECONCILIATION_BATCHES = 10;
+
+// A claimed item performs at most one materialization RPC and one failure RPC.
+// The remaining minute absorbs scheduling, database and network jitter.
+export const OUTBOX_LEASE_SAFETY_MARGIN_MS = 60_000;

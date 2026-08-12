@@ -39,6 +39,5 @@ départ.
 
 ## Précaution
 
-Ne pas confondre ce jeu avec le seed historique `DOC-*`, qui reprend des noms présents
-dans le corpus et doit être traité comme contenant des données personnelles. Les scénarios
-`[DEMO]` sont entièrement fictifs.
+Le seed et les scénarios `[DEMO]` sont entièrement fictifs. Toute source opérationnelle
+reste hors du dépôt, dans le stockage métier contrôlé prévu à cet effet.

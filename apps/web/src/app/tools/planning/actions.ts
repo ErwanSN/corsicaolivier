@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { apiFetch } from '../../../lib/api/server';
 import { scopedHeaders } from '../../../lib/api/scoped-headers';
+import { zonedLocalToIso } from '../../../lib/dates';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -13,77 +14,6 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 function stringValue(formData: FormData, name: string): string {
   const value = formData.get(name);
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function zonedLocalToIso(value: string, timeZone: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
-    value,
-  );
-
-  if (!match) return null;
-
-  const [, year, month, day, hour, minute, second = '0'] = match;
-  const localAsUtc = Date.UTC(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second),
-  );
-
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
-    });
-    const partsAt = (instant: number) =>
-      Object.fromEntries(
-        formatter
-          .formatToParts(new Date(instant))
-          .filter((part) => part.type !== 'literal')
-          .map((part) => [part.type, Number(part.value)]),
-      );
-    const offsetAt = (instant: number) => {
-      const parts = partsAt(instant);
-      return (
-        Date.UTC(
-          parts.year,
-          parts.month - 1,
-          parts.day,
-          parts.hour,
-          parts.minute,
-          parts.second,
-        ) - instant
-      );
-    };
-    const firstPass = localAsUtc - offsetAt(localAsUtc);
-    const instant = localAsUtc - offsetAt(firstPass);
-    const resolved = partsAt(instant);
-
-    if (
-      Date.UTC(
-        resolved.year,
-        resolved.month - 1,
-        resolved.day,
-        resolved.hour,
-        resolved.minute,
-        resolved.second,
-      ) !== localAsUtc
-    ) {
-      return null;
-    }
-
-    return new Date(instant).toISOString();
-  } catch {
-    return null;
-  }
 }
 
 export async function createAgent(formData: FormData): Promise<void> {
@@ -131,6 +61,7 @@ export async function updateAgent(formData: FormData): Promise<void> {
   const displayName = stringValue(formData, 'displayName');
   const hiredOn = stringValue(formData, 'hiredOn');
   const leftOn = stringValue(formData, 'leftOn');
+  const offboardingReason = stringValue(formData, 'offboardingReason');
   const active = stringValue(formData, 'active') === 'on';
   const path = `/tools/planning/agents?site=${primarySiteId}`;
 
@@ -155,6 +86,7 @@ export async function updateAgent(formData: FormData): Promise<void> {
       active,
       hiredOn: hiredOn || null,
       leftOn: leftOn || null,
+      ...(offboardingReason ? { offboardingReason } : {}),
     }),
   });
 
@@ -167,13 +99,72 @@ export async function updateAgent(formData: FormData): Promise<void> {
   redirect(`${path}&saved=updated`);
 }
 
+export async function reactivateAgent(formData: FormData): Promise<void> {
+  const agentId = stringValue(formData, 'agentId');
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const reason = stringValue(formData, 'reason');
+  const path = `/tools/planning/agents/${agentId}`;
+
+  if (
+    ![agentId, organizationId, siteId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    reason.length < 3 ||
+    reason.length > 500
+  ) {
+    redirect(`${path}?error=reactivate`);
+  }
+
+  const result = await apiFetch(`/agents/${agentId}/reactivate`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({ organizationId, reason }),
+  });
+
+  if (result.error) redirect(`${path}?error=reactivate`);
+  revalidatePath('/tools/planning/agents');
+  revalidatePath(path);
+  redirect(`${path}?saved=reactivated`);
+}
+
+export async function retryAgentOffboarding(formData: FormData): Promise<void> {
+  const agentId = stringValue(formData, 'agentId');
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const reason = stringValue(formData, 'reason');
+  const path = `/tools/planning/agents/${agentId}`;
+
+  if (
+    ![agentId, organizationId, siteId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    reason.length < 3 ||
+    reason.length > 500
+  ) {
+    redirect(`${path}?error=retry`);
+  }
+
+  const result = await apiFetch(`/agents/${agentId}/offboarding-plan/retry`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({ organizationId, reason }),
+  });
+
+  if (result.error) redirect(`${path}?error=retry`);
+  revalidatePath('/tools/planning/agents');
+  revalidatePath(path);
+  redirect(`${path}?saved=retry`);
+}
+
 export async function createZone(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
   const name = stringValue(formData, 'name');
-  const path = '/tools/planning/zones';
+  const path = `/tools/planning/zones?site=${encodeURIComponent(siteId)}`;
 
   if (!UUID_PATTERN.test(organizationId) || name.length < 2) {
-    redirect(`${path}?add=1&error=invalid`);
+    redirect(`${path}&add=1&error=invalid`);
   }
 
   const result = await apiFetch<{ id: string }>('/sites', {
@@ -186,14 +177,14 @@ export async function createZone(formData: FormData): Promise<void> {
   });
 
   if (result.error || !result.data || !UUID_PATTERN.test(result.data.id)) {
-    redirect(`${path}?add=1&error=zone`);
+    redirect(`${path}&add=1&error=zone`);
   }
 
   revalidatePath('/tools/planning');
   revalidatePath('/tools/planning/agents');
   revalidatePath('/tools/planning/groupes');
-  revalidatePath(path);
-  redirect(`${path}?saved=zone`);
+  revalidatePath('/tools/planning/zones');
+  redirect(`${path}&saved=zone`);
 }
 
 export async function createPosition(formData: FormData): Promise<void> {
@@ -235,11 +226,13 @@ export async function createPosition(formData: FormData): Promise<void> {
 
 export async function createGroup(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
   const name = stringValue(formData, 'name');
   const description = stringValue(formData, 'description');
+  const path = `/tools/planning/groupes?site=${encodeURIComponent(siteId)}`;
 
   if (!UUID_PATTERN.test(organizationId) || !name) {
-    redirect('/tools/planning/groupes?error=invalid');
+    redirect(`${path}&error=invalid`);
   }
 
   const result = await apiFetch('/groups', {
@@ -255,17 +248,19 @@ export async function createGroup(formData: FormData): Promise<void> {
     }),
   });
 
-  if (result.error) redirect('/tools/planning/groupes?error=save');
+  if (result.error) redirect(`${path}&error=save`);
   revalidatePath('/tools/planning/groupes');
-  redirect('/tools/planning/groupes?saved=group');
+  redirect(`${path}&saved=group`);
 }
 
 export async function addGroupMember(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
   const groupId = stringValue(formData, 'groupId');
   const agentId = stringValue(formData, 'agentId');
   const effectiveFrom = stringValue(formData, 'effectiveFrom');
-  const isPrimary = stringValue(formData, 'isPrimary') === 'on';
+  const isPrimary = stringValue(formData, 'isPrimary') !== 'false';
+  const path = `/tools/planning/groupes?site=${encodeURIComponent(siteId)}&group=${groupId}`;
 
   if (
     ![organizationId, groupId, agentId].every((value) =>
@@ -273,7 +268,7 @@ export async function addGroupMember(formData: FormData): Promise<void> {
     ) ||
     !effectiveFrom
   ) {
-    redirect(`/tools/planning/groupes?group=${groupId}&error=invalid`);
+    redirect(`${path}&error=invalid`);
   }
 
   const result = await apiFetch(`/groups/${groupId}/members`, {
@@ -286,18 +281,19 @@ export async function addGroupMember(formData: FormData): Promise<void> {
   });
 
   if (result.error) {
-    redirect(`/tools/planning/groupes?group=${groupId}&error=member`);
+    redirect(`${path}&error=member`);
   }
   revalidatePath('/tools/planning/groupes');
-  redirect(`/tools/planning/groupes?group=${groupId}&saved=member`);
+  redirect(`${path}&saved=member`);
 }
 
 export async function endGroupMembership(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
   const groupId = stringValue(formData, 'groupId');
   const membershipId = stringValue(formData, 'membershipId');
   const effectiveUntil = stringValue(formData, 'effectiveUntil');
-  const path = `/tools/planning/groupes?group=${groupId}`;
+  const path = `/tools/planning/groupes?site=${encodeURIComponent(siteId)}&group=${groupId}`;
 
   if (
     ![organizationId, groupId, membershipId].every((value) =>
@@ -324,12 +320,13 @@ export async function endGroupMembership(formData: FormData): Promise<void> {
 
 export async function setGroupHourTargets(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
   const groupId = stringValue(formData, 'groupId');
   const weeklyHoursValue = stringValue(formData, 'weeklyHours');
   const monthlyHoursValue = stringValue(formData, 'monthlyHours');
   const weeklyHours = weeklyHoursValue ? Number(weeklyHoursValue) : null;
   const monthlyHours = monthlyHoursValue ? Number(monthlyHoursValue) : null;
-  const path = `/tools/planning/groupes?group=${groupId}`;
+  const path = `/tools/planning/groupes?site=${encodeURIComponent(siteId)}&group=${groupId}`;
 
   if (
     !UUID_PATTERN.test(organizationId) ||
@@ -375,8 +372,8 @@ export async function setHourTarget(formData: FormData): Promise<void> {
   const targetHours = Number(stringValue(formData, 'targetHours'));
   const reason = stringValue(formData, 'reason');
   const returnTo = agentId
-    ? `/tools/planning/agents/${agentId}`
-    : `/tools/planning/groupes?group=${groupId}`;
+    ? `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}`
+    : `/tools/planning/groupes?site=${encodeURIComponent(siteId)}&group=${groupId}`;
 
   if (
     !UUID_PATTERN.test(organizationId) ||
@@ -424,7 +421,7 @@ export async function setAgentContract(formData: FormData): Promise<void> {
     ? Number(monthlyHoursValue)
     : undefined;
   const label = stringValue(formData, 'label');
-  const path = `/tools/planning/agents/${agentId}`;
+  const path = `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}`;
 
   if (
     ![organizationId, siteId, agentId].every((value) =>
@@ -433,7 +430,7 @@ export async function setAgentContract(formData: FormData): Promise<void> {
     !effectiveFrom ||
     !Number.isFinite(weeklyHours)
   ) {
-    redirect(`${path}?error=invalid`);
+    redirect(`${path}&error=invalid`);
   }
 
   const result = await apiFetch(`/agents/${agentId}/contracts`, {
@@ -450,9 +447,128 @@ export async function setAgentContract(formData: FormData): Promise<void> {
     }),
   });
 
-  if (result.error) redirect(`${path}?error=save`);
+  if (result.error) redirect(`${path}&error=save`);
   revalidatePath(path);
-  redirect(`${path}?saved=contract`);
+  redirect(`${path}&saved=contract`);
+}
+
+export async function setAgentSkill(formData: FormData): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const agentId = stringValue(formData, 'agentId');
+  const skillId = stringValue(formData, 'skillId');
+  const validFrom = stringValue(formData, 'validFrom');
+  const level = Number(stringValue(formData, 'level'));
+  const path = `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}`;
+
+  if (
+    ![organizationId, siteId, agentId, skillId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !DATE_PATTERN.test(validFrom) ||
+    !Number.isInteger(level) ||
+    level < 1 ||
+    level > 5
+  ) {
+    redirect(`${path}&error=invalid`);
+  }
+
+  const result = await apiFetch(`/agents/${agentId}/skills`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({
+      organizationId,
+      skillId,
+      level,
+      validFrom,
+    }),
+  });
+
+  if (result.error) redirect(`${path}&error=skill`);
+  revalidatePath(`/tools/planning/agents/${agentId}`);
+  redirect(`${path}&saved=skill`);
+}
+
+export async function createAgentUnavailability(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const agentId = stringValue(formData, 'agentId');
+  const kind = stringValue(formData, 'kind');
+  const startsAt = zonedLocalToIso(
+    stringValue(formData, 'startsAt'),
+    stringValue(formData, 'timeZone'),
+  );
+  const endsAt = zonedLocalToIso(
+    stringValue(formData, 'endsAt'),
+    stringValue(formData, 'timeZone'),
+  );
+  const note = stringValue(formData, 'note');
+  const path = `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}`;
+
+  if (
+    ![organizationId, siteId, agentId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !['leave', 'training', 'medical', 'rest', 'other'].includes(kind) ||
+    !startsAt ||
+    !endsAt ||
+    new Date(endsAt).getTime() <= new Date(startsAt).getTime() ||
+    note.length > 500
+  ) {
+    redirect(`${path}&error=unavailability`);
+  }
+
+  const result = await apiFetch(`/agents/${agentId}/unavailability`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({
+      organizationId,
+      siteId,
+      kind,
+      startsAt,
+      endsAt,
+      ...(note ? { note } : {}),
+    }),
+  });
+
+  if (result.error) redirect(`${path}&error=unavailability`);
+  revalidatePath(`/tools/planning/agents/${agentId}`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=unavailability`);
+}
+
+export async function endAgentUnavailability(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const agentId = stringValue(formData, 'agentId');
+  const unavailabilityId = stringValue(formData, 'unavailabilityId');
+  const path = `/tools/planning/agents/${agentId}?site=${encodeURIComponent(siteId)}`;
+
+  if (
+    ![organizationId, siteId, agentId, unavailabilityId].every((value) =>
+      UUID_PATTERN.test(value),
+    )
+  ) {
+    redirect(`${path}&error=unavailability`);
+  }
+
+  const result = await apiFetch(
+    `/agents/${agentId}/unavailability/${unavailabilityId}/end`,
+    {
+      method: 'PATCH',
+      headers: scopedHeaders(organizationId, siteId),
+      body: JSON.stringify({ endsAt: new Date().toISOString() }),
+    },
+  );
+
+  if (result.error) redirect(`${path}&error=unavailability`);
+  revalidatePath(`/tools/planning/agents/${agentId}`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=unavailability-ended`);
 }
 
 export async function setAgentPositionRule(formData: FormData): Promise<void> {
@@ -472,7 +588,7 @@ export async function setAgentPositionRule(formData: FormData): Promise<void> {
   const redirectPath =
     returnTo === 'agents'
       ? `${pagePath}?site=${encodeURIComponent(siteId)}&edit=${encodeURIComponent(agentId)}`
-      : pagePath;
+      : `${pagePath}?site=${encodeURIComponent(siteId)}`;
   const noticePath = (name: 'error' | 'saved', value: string) =>
     `${redirectPath}${redirectPath.includes('?') ? '&' : '?'}${name}=${value}`;
   const isRestriction = kind === 'restriction';
@@ -584,6 +700,7 @@ export async function publishSchedule(formData: FormData): Promise<void> {
   const organizationId = stringValue(formData, 'organizationId');
   const siteId = stringValue(formData, 'siteId');
   const scheduleId = stringValue(formData, 'scheduleId');
+  const lockVersion = Number(stringValue(formData, 'lockVersion'));
   const weekStart = stringValue(formData, 'weekStart');
   const reason = stringValue(formData, 'reason');
   const path = `/tools/planning?site=${encodeURIComponent(siteId)}&date=${encodeURIComponent(weekStart)}`;
@@ -593,6 +710,8 @@ export async function publishSchedule(formData: FormData): Promise<void> {
       UUID_PATTERN.test(value),
     ) ||
     !DATE_PATTERN.test(weekStart) ||
+    !Number.isSafeInteger(lockVersion) ||
+    lockVersion < 0 ||
     !reason
   ) {
     redirect(`${path}&error=invalid`);
@@ -601,12 +720,141 @@ export async function publishSchedule(formData: FormData): Promise<void> {
   const result = await apiFetch(`/schedule-versions/${scheduleId}/publish`, {
     method: 'POST',
     headers: scopedHeaders(organizationId, siteId),
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ lockVersion, reason }),
   });
 
   if (result.error) redirect(`${path}&error=publish`);
   revalidatePath('/tools/planning');
   redirect(`${path}&saved=published`);
+}
+
+export async function prepareWorkforceConflictDraft(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const conflictId = stringValue(formData, 'conflictId');
+  const weekStart = stringValue(formData, 'weekStart');
+  const path = `/tools/planning?site=${encodeURIComponent(siteId)}&date=${encodeURIComponent(weekStart)}&version=draft`;
+
+  if (
+    ![organizationId, siteId, conflictId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !DATE_PATTERN.test(weekStart)
+  ) {
+    redirect(`${path}&error=invalid`);
+  }
+
+  const result = await apiFetch(
+    `/planning-workforce-conflicts/${conflictId}/draft`,
+    {
+      method: 'POST',
+      headers: scopedHeaders(organizationId, siteId),
+    },
+  );
+
+  if (result.error) redirect(`${path}&error=workforce`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=workforce-draft`);
+}
+
+export async function resolveWorkforceConflict(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const conflictId = stringValue(formData, 'conflictId');
+  const weekStart = stringValue(formData, 'weekStart');
+  const path = `/tools/planning?site=${encodeURIComponent(siteId)}&date=${encodeURIComponent(weekStart)}`;
+
+  if (
+    ![organizationId, siteId, conflictId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !DATE_PATTERN.test(weekStart)
+  ) {
+    redirect(`${path}&error=invalid`);
+  }
+
+  const result = await apiFetch(
+    `/planning-workforce-conflicts/${conflictId}/resolve`,
+    {
+      method: 'POST',
+      headers: scopedHeaders(organizationId, siteId),
+      body: JSON.stringify({
+        reason: 'Vérification manuelle après correction du planning',
+      }),
+    },
+  );
+
+  if (result.error) redirect(`${path}&error=workforce`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=workforce-resolved`);
+}
+
+export async function approveReplanningScenario(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const scenarioId = stringValue(formData, 'scenarioId');
+  const weekStart = stringValue(formData, 'weekStart');
+  const reason = stringValue(formData, 'reason');
+  const path = `/tools/planning?site=${encodeURIComponent(siteId)}&date=${encodeURIComponent(weekStart)}&version=draft`;
+
+  if (
+    ![organizationId, siteId, scenarioId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !DATE_PATTERN.test(weekStart) ||
+    reason.length < 3 ||
+    reason.length > 500
+  ) {
+    redirect(`${path}&error=invalid`);
+  }
+
+  const result = await apiFetch(`/replanning-scenarios/${scenarioId}/approve`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({ reason }),
+  });
+
+  if (result.error) redirect(`${path}&error=replanning`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=replanning`);
+}
+
+export async function rejectReplanningScenario(
+  formData: FormData,
+): Promise<void> {
+  const organizationId = stringValue(formData, 'organizationId');
+  const siteId = stringValue(formData, 'siteId');
+  const scenarioId = stringValue(formData, 'scenarioId');
+  const weekStart = stringValue(formData, 'weekStart');
+  const reason = stringValue(formData, 'reason');
+  const path = `/tools/planning?site=${encodeURIComponent(siteId)}&date=${encodeURIComponent(weekStart)}`;
+
+  if (
+    ![organizationId, siteId, scenarioId].every((value) =>
+      UUID_PATTERN.test(value),
+    ) ||
+    !DATE_PATTERN.test(weekStart) ||
+    reason.length < 3 ||
+    reason.length > 500
+  ) {
+    redirect(`${path}&error=invalid`);
+  }
+
+  const result = await apiFetch(`/replanning-scenarios/${scenarioId}/reject`, {
+    method: 'POST',
+    headers: scopedHeaders(organizationId, siteId),
+    body: JSON.stringify({ reason }),
+  });
+
+  if (result.error) redirect(`${path}&error=replanning`);
+  revalidatePath('/tools/planning');
+  redirect(`${path}&saved=rejected`);
 }
 
 export async function updatePortCallTiming(formData: FormData): Promise<void> {
@@ -617,9 +865,20 @@ export async function updatePortCallTiming(formData: FormData): Promise<void> {
   const arrival = stringValue(formData, 'estimatedArrivalAt');
   const departure = stringValue(formData, 'estimatedDepartureAt');
   const status = stringValue(formData, 'status');
-  const sourceRevision = stringValue(formData, 'sourceRevision');
+  const expectedCurrentSourceRevision = stringValue(
+    formData,
+    'expectedCurrentSourceRevision',
+  );
+  const expectedTimingLockVersion = Number(
+    stringValue(formData, 'expectedTimingLockVersion'),
+  );
+  const reason = stringValue(formData, 'reason');
+  const validUntilInput = stringValue(formData, 'validUntil');
   const arrivalIso = arrival ? zonedLocalToIso(arrival, timeZone) : null;
   const departureIso = departure ? zonedLocalToIso(departure, timeZone) : null;
+  const validUntil = validUntilInput
+    ? zonedLocalToIso(validUntilInput, timeZone)
+    : new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
   const path = `/tools/planning/escales?site=${siteId}&call=${portCallId}`;
 
   if (
@@ -628,7 +887,12 @@ export async function updatePortCallTiming(formData: FormData): Promise<void> {
     ) ||
     (arrival && !arrivalIso) ||
     (departure && !departureIso) ||
-    !status
+    !status ||
+    !Number.isSafeInteger(expectedTimingLockVersion) ||
+    expectedTimingLockVersion < 0 ||
+    reason.length < 3 ||
+    reason.length > 500 ||
+    !validUntil
   ) {
     redirect(`${path}&error=invalid`);
   }
@@ -640,8 +904,10 @@ export async function updatePortCallTiming(formData: FormData): Promise<void> {
       estimatedArrivalAt: arrivalIso,
       estimatedDepartureAt: departureIso,
       status,
-      source: 'tools-panel',
-      sourceRevision: sourceRevision || undefined,
+      expectedCurrentSourceRevision: expectedCurrentSourceRevision || null,
+      expectedTimingLockVersion,
+      reason,
+      validUntil,
     }),
   });
 
@@ -662,6 +928,12 @@ export async function createLoadForecast(formData: FormData): Promise<void> {
     stringValue(formData, 'freightUnitCount') || '0',
   );
   const coachCount = Number(stringValue(formData, 'coachCount') || '0');
+  const reason = stringValue(formData, 'reason');
+  const expectedEffectiveForecastId = stringValue(
+    formData,
+    'expectedEffectiveForecastId',
+  );
+  const validUntil = new Date(Date.now() + 2 * 60 * 60 * 1_000).toISOString();
   const path = `/tools/planning/escales?site=${siteId}&call=${portCallId}`;
 
   if (
@@ -674,7 +946,11 @@ export async function createLoadForecast(formData: FormData): Promise<void> {
       vehicleCount,
       freightUnitCount,
       coachCount,
-    ].every((value) => Number.isInteger(value) && value >= 0)
+    ].every((value) => Number.isInteger(value) && value >= 0) ||
+    reason.length < 3 ||
+    reason.length > 500 ||
+    (expectedEffectiveForecastId !== '' &&
+      !UUID_PATTERN.test(expectedEffectiveForecastId))
   ) {
     redirect(`${path}&error=invalid`);
   }
@@ -691,11 +967,18 @@ export async function createLoadForecast(formData: FormData): Promise<void> {
       vehicleCount,
       freightUnitCount,
       coachCount,
-      source: 'tools-panel',
+      reason,
+      validUntil,
+      expectedEffectiveForecastId: expectedEffectiveForecastId || null,
     }),
   });
 
-  if (result.error) redirect(`${path}&error=forecast`);
+  if (result.error) {
+    const errorKind = result.error.includes('changed concurrently')
+      ? 'forecast-conflict'
+      : 'forecast';
+    redirect(`${path}&error=${errorKind}`);
+  }
   revalidatePath('/tools/planning');
   revalidatePath('/tools/planning/escales');
   redirect(`${path}&saved=forecast`);
@@ -783,6 +1066,12 @@ export async function createDemandProfileLine(
   const vehiclesPerExtraAgent = vehiclesValue
     ? Number(vehiclesValue)
     : undefined;
+  const freightValue = stringValue(formData, 'freightUnitsPerExtraAgent');
+  const freightUnitsPerExtraAgent = freightValue
+    ? Number(freightValue)
+    : undefined;
+  const coachesValue = stringValue(formData, 'coachesPerExtraAgent');
+  const coachesPerExtraAgent = coachesValue ? Number(coachesValue) : undefined;
   const path = `/tools/planning/besoins?site=${siteId}&profile=${profileId}`;
 
   if (
@@ -797,7 +1086,13 @@ export async function createDemandProfileLine(
       (!Number.isInteger(passengersPerExtraAgent) ||
         passengersPerExtraAgent < 1)) ||
     (vehiclesPerExtraAgent !== undefined &&
-      (!Number.isInteger(vehiclesPerExtraAgent) || vehiclesPerExtraAgent < 1))
+      (!Number.isInteger(vehiclesPerExtraAgent) ||
+        vehiclesPerExtraAgent < 1)) ||
+    (freightUnitsPerExtraAgent !== undefined &&
+      (!Number.isInteger(freightUnitsPerExtraAgent) ||
+        freightUnitsPerExtraAgent < 1)) ||
+    (coachesPerExtraAgent !== undefined &&
+      (!Number.isInteger(coachesPerExtraAgent) || coachesPerExtraAgent < 1))
   ) {
     redirect(`${path}&error=invalid`);
   }
@@ -817,6 +1112,8 @@ export async function createDemandProfileLine(
       maximumAgents,
       passengersPerExtraAgent,
       vehiclesPerExtraAgent,
+      freightUnitsPerExtraAgent,
+      coachesPerExtraAgent,
     }),
   });
 
@@ -862,7 +1159,6 @@ export async function createPortCall(formData: FormData): Promise<void> {
       externalReference: externalReference || undefined,
       scheduledArrivalAt,
       scheduledDepartureAt,
-      source: 'tools-panel',
     }),
   });
 

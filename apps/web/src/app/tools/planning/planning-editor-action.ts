@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { apiFetch } from '../../../lib/api/server';
 import { scopedHeaders } from '../../../lib/api/scoped-headers';
+import { zonedLocalToIso } from '../../../lib/dates';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -15,130 +16,155 @@ export type PlanningAssignmentMutationResult =
 
 export type SavePlanningAssignmentInput = Readonly<{
   mode: 'create' | 'update';
-  assignmentId?: string;
+  shiftId?: string;
   organizationId: string;
   siteId: string;
   scheduleVersionId: string;
+  lockVersion: number;
   agentId: string;
   positionId: string;
   portCallId: string | null;
   startsAt: string;
   endsAt: string;
   breakMinutes: number;
+  breaks: ReadonlyArray<
+    Readonly<{ startsAt: string; endsAt: string; label: string }>
+  >;
+  segments: ReadonlyArray<
+    Readonly<{
+      positionId: string;
+      portCallId: string | null;
+      staffingRequirementId: string | null;
+      startsAt: string;
+      endsAt: string;
+    }>
+  >;
   changeReason: string;
   note: string;
   timeZone: string;
 }>;
 
 export type DeletePlanningAssignmentInput = Readonly<{
-  assignmentId: string;
+  shiftId: string;
   organizationId: string;
   siteId: string;
   scheduleVersionId: string;
+  lockVersion: number;
 }>;
 
 export type MovePlanningAssignmentResult =
   Readonly<{ ok: true }> | Readonly<{ ok: false; error: string }>;
 
-function zonedLocalToIso(value: string, timeZone: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
-    value,
-  );
+export type PlanningCandidateRecommendation = Readonly<{
+  id: string;
+  employeeNumber: string;
+  displayName: string;
+  rank: number;
+  preferenceLevel: 'preferred' | 'neutral' | 'avoid';
+  weeklyTargetMinutes: number;
+  scheduledWeekMinutes: number;
+  projectedWeekMinutes: number;
+  weeklyDeficitMinutes: number;
+  recentLoadMinutes: number;
+  explanation: string;
+}>;
 
-  if (!match) return null;
+export type FindPlanningCandidateRecommendationsResult =
+  | Readonly<{
+      ok: true;
+      candidates: PlanningCandidateRecommendation[];
+      total: number;
+    }>
+  | Readonly<{ ok: false; error: string }>;
 
-  const [, year, month, day, hour, minute, second = '0'] = match;
-  const localAsUtc = Date.UTC(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second),
-  );
+export type FindPlanningCandidateRecommendationsInput = Readonly<{
+  organizationId: string;
+  siteId: string;
+  scheduleVersionId: string;
+  shiftId?: string;
+  startsAt: string;
+  endsAt: string;
+  breakMinutes: number;
+  breaks: ReadonlyArray<
+    Readonly<{ startsAt: string; endsAt: string; label: string }>
+  >;
+  segments: ReadonlyArray<
+    Readonly<{
+      positionId: string;
+      startsAt: string;
+      endsAt: string;
+    }>
+  >;
+  query: string;
+  timeZone: string;
+}>;
 
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
-    });
-    const partsAt = (instant: number) =>
-      Object.fromEntries(
-        formatter
-          .formatToParts(new Date(instant))
-          .filter((part) => part.type !== 'literal')
-          .map((part) => [part.type, Number(part.value)]),
-      );
-    const offsetAt = (instant: number) => {
-      const parts = partsAt(instant);
-      return (
-        Date.UTC(
-          parts.year,
-          parts.month - 1,
-          parts.day,
-          parts.hour,
-          parts.minute,
-          parts.second,
-        ) - instant
-      );
-    };
-    const firstPass = localAsUtc - offsetAt(localAsUtc);
-    const instant = localAsUtc - offsetAt(firstPass);
-    const resolved = partsAt(instant);
+type CandidateApiPage = Readonly<{
+  items: ReadonlyArray<{
+    agent_id: string;
+    employee_number: string;
+    display_name: string;
+    recommendation_rank: number;
+    preference_level: string;
+    weekly_target_minutes: number;
+    scheduled_week_minutes: number;
+    projected_week_minutes: number;
+    weekly_deficit_minutes: number;
+    recent_load_minutes: number;
+    explanation: string;
+  }>;
+  total: number;
+}>;
 
-    if (
-      Date.UTC(
-        resolved.year,
-        resolved.month - 1,
-        resolved.day,
-        resolved.hour,
-        resolved.minute,
-        resolved.second,
-      ) !== localAsUtc
-    ) {
-      return null;
+type TimelineSegment = Readonly<{
+  positionId: string;
+  startsAt: string;
+  endsAt: string;
+}>;
+
+type TimelineInput<Segment extends TimelineSegment> = Readonly<{
+  startsAt: string;
+  endsAt: string;
+  breakMinutes: number;
+  breaks: ReadonlyArray<
+    Readonly<{ startsAt: string; endsAt: string; label: string }>
+  >;
+  segments: ReadonlyArray<Segment>;
+  timeZone: string;
+}>;
+
+type ConvertedTimeline<Segment extends TimelineSegment> = Readonly<{
+  startsAtIso: string;
+  endsAtIso: string;
+  segments: Array<
+    Omit<Segment, 'startsAt' | 'endsAt'> & {
+      startsAt: string;
+      endsAt: string;
     }
+  >;
+  breaks: Array<{
+    startsAt: string;
+    endsAt: string;
+    label: string | null;
+  }>;
+}>;
 
-    return new Date(instant).toISOString();
-  } catch {
-    return null;
-  }
-}
-
-function validateSaveInput(
-  input: SavePlanningAssignmentInput,
-): Readonly<{ startsAtIso: string; endsAtIso: string }> | null {
-  const requiredIds = [
-    input.organizationId,
-    input.siteId,
-    input.scheduleVersionId,
-    input.agentId,
-    input.positionId,
-  ];
+function convertServiceTimeline<Segment extends TimelineSegment>(
+  input: TimelineInput<Segment>,
+): ConvertedTimeline<Segment> | null {
   const startsAtIso = zonedLocalToIso(input.startsAt, input.timeZone);
   const endsAtIso = zonedLocalToIso(input.endsAt, input.timeZone);
 
   if (
-    !requiredIds.every((value) => UUID_PATTERN.test(value)) ||
-    (input.mode === 'update' &&
-      (!input.assignmentId || !UUID_PATTERN.test(input.assignmentId))) ||
-    (input.portCallId !== null && !UUID_PATTERN.test(input.portCallId)) ||
     !startsAtIso ||
     !endsAtIso ||
     new Date(endsAtIso) <= new Date(startsAtIso) ||
     !Number.isInteger(input.breakMinutes) ||
     input.breakMinutes < 0 ||
     input.breakMinutes > 720 ||
-    (input.changeReason.trim().length > 0 &&
-      input.changeReason.trim().length < 3) ||
-    input.changeReason.length > 200 ||
-    input.note.length > 500
+    input.segments.length < 1 ||
+    input.segments.length > 20 ||
+    input.breaks.length > 10
   ) {
     return null;
   }
@@ -147,7 +173,218 @@ function validateSaveInput(
     (new Date(endsAtIso).getTime() - new Date(startsAtIso).getTime()) / 60_000;
 
   if (input.breakMinutes >= durationMinutes) return null;
-  return { startsAtIso, endsAtIso };
+
+  const convertedSegments = input.segments.map((segment) => ({
+    ...segment,
+    startsAt: zonedLocalToIso(segment.startsAt, input.timeZone),
+    endsAt: zonedLocalToIso(segment.endsAt, input.timeZone),
+  }));
+
+  if (
+    convertedSegments.some(
+      (segment) =>
+        !UUID_PATTERN.test(segment.positionId) ||
+        !segment.startsAt ||
+        !segment.endsAt ||
+        segment.startsAt >= segment.endsAt,
+    ) ||
+    convertedSegments[0]?.startsAt !== startsAtIso ||
+    convertedSegments.at(-1)?.endsAt !== endsAtIso ||
+    convertedSegments.some(
+      (segment, index) =>
+        index > 0 && convertedSegments[index - 1]?.endsAt !== segment.startsAt,
+    )
+  ) {
+    return null;
+  }
+
+  const convertedBreaks = input.breaks
+    .map((shiftBreak) => ({
+      startsAt: zonedLocalToIso(shiftBreak.startsAt, input.timeZone),
+      endsAt: zonedLocalToIso(shiftBreak.endsAt, input.timeZone),
+      label: shiftBreak.label.trim() || null,
+    }))
+    .sort((left, right) =>
+      (left.startsAt ?? '').localeCompare(right.startsAt ?? ''),
+    );
+
+  if (
+    convertedBreaks.some(
+      (shiftBreak, index) =>
+        !shiftBreak.startsAt ||
+        !shiftBreak.endsAt ||
+        shiftBreak.startsAt < startsAtIso ||
+        shiftBreak.endsAt > endsAtIso ||
+        shiftBreak.startsAt >= shiftBreak.endsAt ||
+        (shiftBreak.label?.length ?? 0) > 120 ||
+        (index > 0 &&
+          (convertedBreaks[index - 1]?.endsAt ?? '') > shiftBreak.startsAt),
+    )
+  ) {
+    return null;
+  }
+
+  const breaks = convertedBreaks.length
+    ? convertedBreaks
+    : input.breakMinutes > 0
+      ? [
+          {
+            startsAt: new Date(
+              new Date(startsAtIso).getTime() +
+                (durationMinutes - input.breakMinutes) * 30_000,
+            ).toISOString(),
+            endsAt: new Date(
+              new Date(startsAtIso).getTime() +
+                (durationMinutes + input.breakMinutes) * 30_000,
+            ).toISOString(),
+            label: null,
+          },
+        ]
+      : [];
+
+  return {
+    startsAtIso,
+    endsAtIso,
+    segments: convertedSegments.map((segment) => ({
+      ...segment,
+      startsAt: segment.startsAt!,
+      endsAt: segment.endsAt!,
+    })),
+    breaks: breaks.map((shiftBreak) => ({
+      ...shiftBreak,
+      startsAt: shiftBreak.startsAt!,
+      endsAt: shiftBreak.endsAt!,
+    })),
+  };
+}
+
+function validateSaveInput(input: SavePlanningAssignmentInput): Readonly<{
+  startsAtIso: string;
+  endsAtIso: string;
+  segments: Array<{
+    positionId: string;
+    portCallId: string | null;
+    staffingRequirementId: string | null;
+    startsAt: string;
+    endsAt: string;
+  }>;
+  breaks: Array<{
+    startsAt: string;
+    endsAt: string;
+    label: string | null;
+  }>;
+}> | null {
+  const requiredIds = [
+    input.organizationId,
+    input.siteId,
+    input.scheduleVersionId,
+    input.agentId,
+    input.positionId,
+  ];
+
+  if (
+    !requiredIds.every((value) => UUID_PATTERN.test(value)) ||
+    (input.mode === 'update' &&
+      (!input.shiftId || !UUID_PATTERN.test(input.shiftId))) ||
+    (input.portCallId !== null && !UUID_PATTERN.test(input.portCallId)) ||
+    !Number.isSafeInteger(input.lockVersion) ||
+    input.lockVersion < 0 ||
+    (input.changeReason.trim().length > 0 &&
+      input.changeReason.trim().length < 3) ||
+    input.changeReason.length > 200 ||
+    input.note.length > 500 ||
+    input.segments.some(
+      (segment) =>
+        (segment.portCallId !== null &&
+          !UUID_PATTERN.test(segment.portCallId)) ||
+        (segment.staffingRequirementId !== null &&
+          !UUID_PATTERN.test(segment.staffingRequirementId)),
+    )
+  ) {
+    return null;
+  }
+
+  return convertServiceTimeline(input);
+}
+
+export async function findPlanningCandidateRecommendations(
+  input: FindPlanningCandidateRecommendationsInput,
+): Promise<FindPlanningCandidateRecommendationsResult> {
+  const query = input.query.trim();
+
+  if (
+    ![input.organizationId, input.siteId, input.scheduleVersionId].every(
+      (value) => UUID_PATTERN.test(value),
+    ) ||
+    (input.shiftId !== undefined && !UUID_PATTERN.test(input.shiftId)) ||
+    (query.length > 0 && query.length < 2) ||
+    query.length > 80
+  ) {
+    return { ok: false, error: 'Contexte de recommandation incorrect.' };
+  }
+
+  const timeline = convertServiceTimeline(input);
+  if (!timeline) {
+    return {
+      ok: false,
+      error: 'Vérifiez les postes, les horaires et les pauses du service.',
+    };
+  }
+
+  const result = await apiFetch<CandidateApiPage>(
+    `/schedule-versions/${input.scheduleVersionId}/agent-candidates/query`,
+    {
+      method: 'POST',
+      headers: scopedHeaders(input.organizationId, input.siteId),
+      body: JSON.stringify({
+        startsAt: timeline.startsAtIso,
+        endsAt: timeline.endsAtIso,
+        segments: timeline.segments.map((segment) => ({
+          positionId: segment.positionId,
+          startsAt: segment.startsAt,
+          endsAt: segment.endsAt,
+        })),
+        breaks: timeline.breaks.map((shiftBreak) => ({
+          startsAt: shiftBreak.startsAt,
+          endsAt: shiftBreak.endsAt,
+        })),
+        excludedShiftId: input.shiftId,
+        q: query || undefined,
+        limit: 20,
+        offset: 0,
+      }),
+    },
+  );
+
+  if (!result.data) {
+    return {
+      ok: false,
+      error:
+        result.error ?? 'Les recommandations sont momentanément indisponibles.',
+    };
+  }
+
+  return {
+    ok: true,
+    total: result.data.total,
+    candidates: result.data.items.map((candidate) => ({
+      id: candidate.agent_id,
+      employeeNumber: candidate.employee_number,
+      displayName: candidate.display_name,
+      rank: candidate.recommendation_rank,
+      preferenceLevel:
+        candidate.preference_level === 'preferred' ||
+        candidate.preference_level === 'avoid'
+          ? candidate.preference_level
+          : 'neutral',
+      weeklyTargetMinutes: candidate.weekly_target_minutes,
+      scheduledWeekMinutes: candidate.scheduled_week_minutes,
+      projectedWeekMinutes: candidate.projected_week_minutes,
+      weeklyDeficitMinutes: candidate.weekly_deficit_minutes,
+      recentLoadMinutes: candidate.recent_load_minutes,
+      explanation: candidate.explanation,
+    })),
+  };
 }
 
 export async function savePlanningAssignment(
@@ -164,8 +401,8 @@ export async function savePlanningAssignment(
 
   const endpoint =
     input.mode === 'create'
-      ? `/schedule-versions/${input.scheduleVersionId}/shifts`
-      : `/schedule-versions/${input.scheduleVersionId}/assignments/${input.assignmentId}/details`;
+      ? `/schedule-versions/${input.scheduleVersionId}/services`
+      : `/schedule-versions/${input.scheduleVersionId}/shifts/${input.shiftId}`;
   const trimmedReason = input.changeReason.trim();
   const trimmedNote = input.note.trim();
   const note = trimmedReason
@@ -184,11 +421,11 @@ export async function savePlanningAssignment(
     headers: scopedHeaders(input.organizationId, input.siteId),
     body: JSON.stringify({
       agentId: input.agentId,
-      positionId: input.positionId,
-      portCallId: input.portCallId,
+      lockVersion: input.lockVersion,
       startsAt: instants.startsAtIso,
       endsAt: instants.endsAtIso,
-      breakMinutes: input.breakMinutes,
+      segments: instants.segments,
+      breaks: instants.breaks,
       note: note || null,
     }),
   });
@@ -214,20 +451,23 @@ export async function deletePlanningAssignment(
 ): Promise<PlanningAssignmentMutationResult> {
   if (
     ![
-      input.assignmentId,
+      input.shiftId,
       input.organizationId,
       input.siteId,
       input.scheduleVersionId,
-    ].every((value) => UUID_PATTERN.test(value))
+    ].every((value) => UUID_PATTERN.test(value)) ||
+    !Number.isSafeInteger(input.lockVersion) ||
+    input.lockVersion < 0
   ) {
     return { ok: false, error: 'Affectation incorrecte.' };
   }
 
   const result = await apiFetch(
-    `/schedule-versions/${input.scheduleVersionId}/assignments/${input.assignmentId}`,
+    `/schedule-versions/${input.scheduleVersionId}/shifts/${input.shiftId}`,
     {
       method: 'DELETE',
       headers: scopedHeaders(input.organizationId, input.siteId),
+      body: JSON.stringify({ lockVersion: input.lockVersion }),
     },
   );
 
@@ -242,6 +482,7 @@ export async function movePlanningAssignment(input: {
   organizationId: string;
   positionId: string;
   scheduleVersionId: string;
+  lockVersion: number;
   siteId: string;
   workDate: string;
 }): Promise<MovePlanningAssignmentResult> {
@@ -253,6 +494,8 @@ export async function movePlanningAssignment(input: {
       input.scheduleVersionId,
       input.siteId,
     ].every((value) => UUID_PATTERN.test(value)) ||
+    !Number.isSafeInteger(input.lockVersion) ||
+    input.lockVersion < 0 ||
     !DATE_PATTERN.test(input.workDate)
   ) {
     return { ok: false, error: 'Destination incorrecte.' };
@@ -264,6 +507,7 @@ export async function movePlanningAssignment(input: {
       method: 'PATCH',
       headers: scopedHeaders(input.organizationId, input.siteId),
       body: JSON.stringify({
+        lockVersion: input.lockVersion,
         positionId: input.positionId,
         workDate: input.workDate,
       }),

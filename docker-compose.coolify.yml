@@ -1,0 +1,168 @@
+# Coolify deployment for the Corsica Linea planning platform.
+#
+# The web app is the only publicly routed service. The API stays on the private
+# application network and is reached server-side by Next.js, so no business
+# endpoint is exposed directly to the browser.
+#
+# Supabase is NOT part of this stack: point the variables below at the existing
+# Supabase service. The web and HTTP API take the publishable key only. The
+# service-role key is injected exclusively into the private outbox worker.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 1.0
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - default
+      - supabase-backplane
+    environment:
+      NODE_ENV: production
+      API_PORT: 3001
+      # Must list the public web origin, otherwise the browser is refused.
+      CORS_ORIGIN: ${WEB_PUBLIC_URL:?public web URL required}
+      SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?publishable Supabase key required}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command:
+      - node
+      - dist/worker.js
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    # One claimed item can need two 15 s RPCs. Once SIGTERM is received, the
+    # worker finishes claimed items and at most the maintenance RPC in progress.
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - supabase-backplane
+    environment:
+      NODE_ENV: production
+      SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?worker service role key required}
+      OUTBOX_HEALTH_FILE: /tmp/corsica-outbox-worker.heartbeat
+      OUTBOX_HEALTH_MAX_AGE_MS: 180000
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - dist/worker-health.js
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Inlined into the client bundle, so they are needed at build time too.
+        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?public Supabase URL required}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?publishable Supabase key required}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,uid=1001,gid=1001,mode=1777,size=64m
+      - /app/apps/web/.next/cache:rw,noexec,nosuid,uid=1001,gid=1001,mode=0750,size=128m
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.5
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    networks:
+      - default
+      - coolify
+      # Dedicated point-to-point network: the matching Supabase patch must
+      # attach only GoTrue, never the full Supabase internal network.
+      - auth-backplane
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # The suffix routes the public domain to the container's port 3000.
+      SERVICE_FQDN_WEB_3000: ${WEB_PUBLIC_URL:?public web URL required}
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:?public Supabase URL required}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?publishable Supabase key required}
+      # Auth SSR over the private network; browser bundles keep the public URL.
+      SUPABASE_SERVER_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
+      # Direct GoTrue route used only for signed per-identity rate-limit keys.
+      SUPABASE_AUTH_INTERNAL_URL: ${SUPABASE_AUTH_INTERNAL_URL:?direct internal GoTrue URL required}
+      SUPABASE_AUTH_RATE_LIMIT_SECRET: ${SUPABASE_AUTH_RATE_LIMIT_SECRET:?Auth rate-limit HMAC secret required}
+      # Server-side only: resolved over the internal Coolify network.
+      API_URL: http://api:3001
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  supabase-backplane:
+    name: ${SUPABASE_API_NETWORK:?dedicated Supabase API network name required}
+    external: true
+  auth-backplane:
+    name: ${SUPABASE_AUTH_NETWORK:?dedicated Auth network name required}
+    external: true
+  coolify:
+    external: true

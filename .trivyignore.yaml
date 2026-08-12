@@ -1,0 +1,9 @@
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - ops/supabase-dr/Dockerfile.bootstrap
+    statement: >-
+      The qualified Supabase entrypoint needs root to initialize a new PGDATA,
+      then runs PostgreSQL as the postgres operating-system account. This image
+      is restricted to the internal, portless disaster-recovery bootstrap.
+    expired_at: 2027-08-11

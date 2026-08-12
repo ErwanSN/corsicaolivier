@@ -1,4 +1,14 @@
-import { IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListPositionsQuery {
   @IsUUID()
@@ -7,6 +17,28 @@ export class ListPositionsQuery {
   @IsOptional()
   @IsUUID()
   declare siteId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  declare page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  declare pageSize?: number;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @Length(1, 80)
+  declare q?: string;
 }
 
 export class CreatePositionDto {

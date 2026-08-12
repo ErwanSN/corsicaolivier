@@ -21,6 +21,15 @@ coverage/
 # Supabase CLI
 .supabase/
 supabase/.temp/
+supabase/.branches/
 
 # Local audit artifacts and disposable database probes
 tmp/
+
+# Operational source documents may contain personal data. Keep them only in
+# the access-controlled document store, never in Git or build contexts.
+/corpus/
+
+# Playwright keeps only local diagnostics and failure artifacts here.
+/apps/web/playwright-report/
+/apps/web/test-results/

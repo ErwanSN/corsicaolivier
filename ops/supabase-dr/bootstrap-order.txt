@@ -1,0 +1,8 @@
+# destination-relative-to-/docker-entrypoint-initdb.d actor source-relative-to-this-directory
+init-scripts/98-webhooks.sql postgres bootstrap/webhooks.sql
+init-scripts/99-jwt.sql postgres bootstrap/jwt.sql.template
+init-scripts/99-roles.sql postgres bootstrap/roles.sql.template
+migrations/97-_supabase.sql supabase_admin bootstrap/_supabase.sql
+migrations/99-logs.sql supabase_admin bootstrap/logs.sql
+migrations/99-pooler.sql supabase_admin bootstrap/pooler.sql
+migrations/99-realtime.sql supabase_admin bootstrap/realtime.sql

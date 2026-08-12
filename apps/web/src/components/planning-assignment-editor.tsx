@@ -1,84 +1,25 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import {
   deletePlanningAssignment,
   savePlanningAssignment,
 } from '../app/tools/planning/planning-editor-action';
-import type { Agent, PortCall, Position, Vessel } from '../lib/api/types';
-import { PlatformSelect } from './ui/platform-select';
+import { PlanningAssignmentAdvancedFields } from './planning-assignment-advanced-fields';
+import { PlanningAssignmentAgentField } from './planning-assignment-agent-field';
+import { PlanningAssignmentPrimaryFields } from './planning-assignment-primary-fields';
+import type {
+  EditorBreak,
+  EditorSegment,
+  PlanningAssignmentEditorProps,
+} from './planning-assignment-editor.types';
+import { availableCalls } from './planning-assignment-editor.utils';
+import { usePlanningCandidateSearch } from './use-planning-candidate-search';
+import { usePlanningDialogFocus } from './use-planning-dialog-focus';
 import styles from './planning-assignment-editor.module.css';
 
-export type PlanningEditorTarget = Readonly<{
-  mode: 'create' | 'update';
-  assignmentId?: string;
-  organizationId: string;
-  siteId: string;
-  scheduleVersionId: string;
-  agentId: string;
-  positionId: string;
-  portCallId: string | null;
-  startsAt: string;
-  endsAt: string;
-  breakMinutes: number;
-  note: string;
-}>;
-
-type PlanningAssignmentEditorProps = Readonly<{
-  agents: Agent[];
-  calls: PortCall[];
-  onClose: () => void;
-  onMutation: (result: { kind: 'error' | 'success'; message: string }) => void;
-  positions: Position[];
-  target: PlanningEditorTarget;
-  timeZone: string;
-  vessels: Vessel[];
-}>;
-
-function callInstant(call: PortCall): string | null {
-  return (
-    call.estimated_arrival_at ??
-    call.scheduled_arrival_at ??
-    call.estimated_departure_at ??
-    call.scheduled_departure_at
-  );
-}
-
-function callTime(value: string | null, timeZone: string): string {
-  if (!value) return 'heure inconnue';
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone,
-  }).format(new Date(value));
-}
-
-function durationLabel(startsAt: string, endsAt: string, breakMinutes: number) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-  const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60_000);
-
-  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
-    return 'Horaires à vérifier';
-  }
-
-  const paidMinutes = Math.max(0, totalMinutes - breakMinutes);
-  const hours = Math.floor(paidMinutes / 60);
-  const minutes = paidMinutes % 60;
-  return `${hours} h ${String(minutes).padStart(2, '0')} de travail planifié`;
-}
-
-function normalizedSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('fr-FR')
-    .trim();
-}
+export type { PlanningEditorTarget } from './planning-assignment-editor.types';
 
 export function PlanningAssignmentEditor({
   agents,
@@ -90,86 +31,64 @@ export function PlanningAssignmentEditor({
   timeZone,
   vessels,
 }: PlanningAssignmentEditorProps) {
-  const [agentId, setAgentId] = useState(target.agentId);
-  const [agentSearch, setAgentSearch] = useState('');
   const [positionId, setPositionId] = useState(target.positionId);
   const [portCallId, setPortCallId] = useState(target.portCallId ?? '');
   const [startsAt, setStartsAt] = useState(target.startsAt);
   const [endsAt, setEndsAt] = useState(target.endsAt);
   const [breakMinutes, setBreakMinutes] = useState(target.breakMinutes);
+  const [segments, setSegments] = useState<EditorSegment[]>(() =>
+    target.segments.map((segment) => ({ ...segment })),
+  );
+  const [shiftBreaks, setShiftBreaks] = useState<EditorBreak[]>(() =>
+    target.breaks.map((shiftBreak) => ({ ...shiftBreak })),
+  );
   const [note, setNote] = useState(target.note);
   const [lastMinuteChange, setLastMinuteChange] = useState(false);
   const [changeReason, setChangeReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(
+    target.segments.length > 1 || target.breaks.length > 1,
+  );
   const [isPending, startTransition] = useTransition();
+  const panelRef = usePlanningDialogFocus(isPending, onClose);
   const vesselById = useMemo(
     () => new Map(vessels.map((vessel) => [vessel.id, vessel])),
     [vessels],
   );
   const sortedCalls = useMemo(
-    () =>
-      [...calls]
-        .filter((call) => call.status !== 'cancelled' || call.id === portCallId)
-        .sort((left, right) =>
-          (callInstant(left) ?? '').localeCompare(callInstant(right) ?? ''),
-        ),
+    () => availableCalls(calls, portCallId),
     [calls, portCallId],
   );
-  const eligibleAgents = useMemo(
-    () =>
-      agents
-        .filter((agent) => agent.active || agent.id === agentId)
-        .sort((left, right) =>
-          left.display_name.localeCompare(right.display_name, 'fr-FR', {
-            sensitivity: 'base',
-          }),
-        ),
-    [agentId, agents],
-  );
-  const matchingAgents = useMemo(() => {
-    const query = normalizedSearch(agentSearch);
-    if (!query) return eligibleAgents;
-
-    return eligibleAgents.filter((agent) =>
-      normalizedSearch(
-        `${agent.display_name} ${agent.employee_number}`,
-      ).includes(query),
-    );
-  }, [agentSearch, eligibleAgents]);
-  const visibleAgents = useMemo(() => {
-    const selectedAgent = eligibleAgents.find((agent) => agent.id === agentId);
-
-    return selectedAgent &&
-      !matchingAgents.some((agent) => agent.id === selectedAgent.id)
-      ? [selectedAgent, ...matchingAgents]
-      : matchingAgents;
-  }, [agentId, eligibleAgents, matchingAgents]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !isPending) onClose();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPending, onClose]);
+  const candidateSearch = usePlanningCandidateSearch({
+    agents,
+    breakMinutes,
+    endsAt,
+    segments,
+    shiftBreaks,
+    startsAt,
+    target,
+    timeZone,
+  });
 
   const handleSave = () => {
     setError(null);
     startTransition(async () => {
       const result = await savePlanningAssignment({
         mode: target.mode,
-        assignmentId: target.assignmentId,
+        shiftId: target.shiftId,
         organizationId: target.organizationId,
         siteId: target.siteId,
         scheduleVersionId: target.scheduleVersionId,
-        agentId,
+        lockVersion: target.lockVersion,
+        agentId: candidateSearch.agentId,
         positionId,
         portCallId: portCallId || null,
         startsAt,
         endsAt,
         breakMinutes,
+        breaks: shiftBreaks,
+        segments,
         changeReason: lastMinuteChange ? changeReason : '',
         note,
         timeZone,
@@ -186,14 +105,17 @@ export function PlanningAssignmentEditor({
   };
 
   const handleDelete = () => {
-    if (!target.assignmentId) return;
+    const shiftId = target.shiftId;
+    if (!shiftId) return;
+
     setError(null);
     startTransition(async () => {
       const result = await deletePlanningAssignment({
-        assignmentId: target.assignmentId!,
+        shiftId,
         organizationId: target.organizationId,
         siteId: target.siteId,
         scheduleVersionId: target.scheduleVersionId,
+        lockVersion: target.lockVersion,
       });
 
       if (!result.ok) {
@@ -209,7 +131,6 @@ export function PlanningAssignmentEditor({
 
   return (
     <div
-      aria-label="Fermer l’éditeur"
       className={styles.backdrop}
       data-print-hide
       data-svg-hide
@@ -219,10 +140,13 @@ export function PlanningAssignmentEditor({
       role="presentation"
     >
       <section
+        aria-describedby="assignment-editor-rules"
         aria-labelledby="assignment-editor-title"
         aria-modal="true"
         className={styles.panel}
+        ref={panelRef}
         role="dialog"
+        tabIndex={-1}
       >
         <header className={styles.header}>
           <div>
@@ -245,152 +169,53 @@ export function PlanningAssignmentEditor({
         </header>
 
         <form
+          aria-busy={isPending}
           className={styles.form}
           onSubmit={(event) => {
             event.preventDefault();
             handleSave();
           }}
         >
-          <div className={styles.field}>
-            <label htmlFor="planning-editor-agent">Agent affecté</label>
-            <div className={styles.agentSearch}>
-              <input
-                aria-label="Rechercher un agent"
-                autoComplete="off"
-                autoFocus
-                className="field-input"
-                disabled={isPending}
-                onChange={(event) => setAgentSearch(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') event.preventDefault();
-                }}
-                placeholder="Rechercher par nom ou matricule"
-                type="search"
-                value={agentSearch}
-              />
-              {agentSearch ? (
-                <button
-                  disabled={isPending}
-                  onClick={() => setAgentSearch('')}
-                  type="button"
-                >
-                  Effacer
-                </button>
-              ) : null}
-            </div>
-            <p className={styles.agentResultCount} aria-live="polite">
-              {agentSearch
-                ? `${matchingAgents.length} résultat${matchingAgents.length > 1 ? 's' : ''}`
-                : `${eligibleAgents.length} collaborateur${eligibleAgents.length > 1 ? 's' : ''} disponible${eligibleAgents.length > 1 ? 's' : ''}`}
-            </p>
-            <PlatformSelect
-              disabled={isPending}
-              id="planning-editor-agent"
-              onChange={(event) => {
-                setAgentId(event.target.value);
-                setAgentSearch('');
-              }}
-              required
-              value={agentId}
-            >
-              <option value="">Choisir un agent</option>
-              {visibleAgents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.display_name} · {agent.employee_number}
-                </option>
-              ))}
-            </PlatformSelect>
-            <small>
-              Changer l’agent conserve le poste et les horaires saisis.
-            </small>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="planning-editor-position">Poste</label>
-            <PlatformSelect
-              disabled={isPending}
-              id="planning-editor-position"
-              onChange={(event) => setPositionId(event.target.value)}
-              required
-              value={positionId}
-            >
-              <option value="">Choisir un poste</option>
-              {positions
-                .filter(
-                  (position) => position.active || position.id === positionId,
-                )
-                .map((position) => (
-                  <option key={position.id} value={position.id}>
-                    {position.name}
-                  </option>
-                ))}
-            </PlatformSelect>
-          </div>
-
-          <div className={styles.timeGrid}>
-            <div className={styles.field}>
-              <label htmlFor="planning-editor-start">Début</label>
-              <input
-                className="field-input"
-                disabled={isPending}
-                id="planning-editor-start"
-                onChange={(event) => setStartsAt(event.target.value)}
-                required
-                type="datetime-local"
-                value={startsAt}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="planning-editor-end">Fin</label>
-              <input
-                className="field-input"
-                disabled={isPending}
-                id="planning-editor-end"
-                onChange={(event) => setEndsAt(event.target.value)}
-                required
-                type="datetime-local"
-                value={endsAt}
-              />
-            </div>
-          </div>
-
-          <div className={styles.durationSummary} role="status">
-            {durationLabel(startsAt, endsAt, breakMinutes)}
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="planning-editor-break">Pause en minutes</label>
-            <input
-              className="field-input"
-              disabled={isPending}
-              id="planning-editor-break"
-              max="720"
-              min="0"
-              onChange={(event) => setBreakMinutes(Number(event.target.value))}
-              required
-              step="5"
-              type="number"
-              value={breakMinutes}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="planning-editor-call">Escale associée</label>
-            <PlatformSelect
-              disabled={isPending}
-              id="planning-editor-call"
-              onChange={(event) => setPortCallId(event.target.value)}
-              value={portCallId}
-            >
-              <option value="">Aucune escale</option>
-              {sortedCalls.map((call) => (
-                <option key={call.id} value={call.id}>
-                  {vesselById.get(call.vessel_id)?.name ?? 'Navire'} ·{' '}
-                  {callTime(callInstant(call), timeZone)}
-                </option>
-              ))}
-            </PlatformSelect>
-          </div>
+          <PlanningAssignmentAgentField
+            isPending={isPending}
+            search={candidateSearch}
+          />
+          <PlanningAssignmentPrimaryFields
+            breakMinutes={breakMinutes}
+            endsAt={endsAt}
+            isPending={isPending}
+            portCallId={portCallId}
+            positionId={positionId}
+            positions={positions}
+            setBreakMinutes={setBreakMinutes}
+            setEndsAt={setEndsAt}
+            setPortCallId={setPortCallId}
+            setPositionId={setPositionId}
+            setSegments={setSegments}
+            setShiftBreaks={setShiftBreaks}
+            setStartsAt={setStartsAt}
+            sortedCalls={sortedCalls}
+            startsAt={startsAt}
+            timeZone={timeZone}
+            vesselById={vesselById}
+          />
+          <PlanningAssignmentAdvancedFields
+            advancedOpen={advancedOpen}
+            breakMinutes={breakMinutes}
+            endsAt={endsAt}
+            isPending={isPending}
+            positions={positions}
+            segments={segments}
+            setAdvancedOpen={setAdvancedOpen}
+            setBreakMinutes={setBreakMinutes}
+            setSegments={setSegments}
+            setShiftBreaks={setShiftBreaks}
+            shiftBreaks={shiftBreaks}
+            sortedCalls={sortedCalls}
+            startsAt={startsAt}
+            timeZone={timeZone}
+            vesselById={vesselById}
+          />
 
           <fieldset className={styles.lastMinuteChange}>
             <label className={styles.lastMinuteToggle}>
@@ -445,13 +270,17 @@ export function PlanningAssignmentEditor({
             />
           </div>
 
-          <aside className={styles.rules}>
+          <div
+            className={styles.rules}
+            id="assignment-editor-rules"
+            role="note"
+          >
             L’enregistrement contrôle automatiquement les chevauchements, les
             indisponibilités, les postes interdits, les habilitations et le
             repos : 11 h minimum, 6 jours consécutifs maximum et, après un
             service commencé à 06:00 ou avant, reprise le lendemain à 12:00 ou
             après.
-          </aside>
+          </div>
 
           {error ? (
             <p className={styles.error} role="alert">
@@ -461,9 +290,9 @@ export function PlanningAssignmentEditor({
 
           {confirmDelete ? (
             <div className={styles.deleteConfirmation} role="alert">
-              <strong>Supprimer définitivement cette affectation ?</strong>
+              <strong>Supprimer définitivement ce service ?</strong>
               <span>
-                Cette action retire l’agent de cette case du brouillon.
+                Cette action retire tous ses postes et pauses du brouillon.
               </span>
               <div>
                 <button

@@ -4,7 +4,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 
-import type { AppRole, Json } from '../database/database.types';
+import type { AppRole } from '../database/database.aliases';
+import type { Json } from '../database/database.types';
 import { SupabaseService } from '../database/supabase.service';
 import type { AccessContext, RoleAssignment } from './auth-context';
 

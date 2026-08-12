@@ -20,7 +20,7 @@ planning vide.
 
 ## Méthode et périmètre
 
-- lecture des cinq classeurs Excel et des deux PDF présents dans `corpus/` ;
+- lecture contrôlée des classeurs et PDF métier, conservés hors du dépôt ;
 - comparaison des feuilles vierges avec les trois semaines remplies du 4 au 24 mai 2026 ;
 - création de cas fictifs inspirés des charges, postes et mouvements observés ;
 - exécution transactionnelle des migrations sur PostgreSQL distant avant déploiement ;
@@ -144,9 +144,9 @@ les ports, PAQ, charges en tête de journée, référents et impression papier.
 5. **Exploitation non prouvée.** Sauvegardes/PITR, restauration, supervision, alertes,
    centralisation des logs, SLO, WAF et plan de continuité doivent être configurés et
    testés sur Coolify/Supabase.
-6. **Données du corpus.** Le seed contient des noms potentiellement personnels. Il faut
-   une décision DPO, une base de développement contrôlée et de préférence un corpus
-   anonymisé.
+6. **Données du corpus — résolu côté dépôt.** Les sources ont été retirées de Git et le
+   seed ne contient plus que des identités fictives. Le traitement de l’historique Git et
+   les durées de conservation restent à décider avec le DPO.
 
 ### Priorité haute — fiabilité métier
 

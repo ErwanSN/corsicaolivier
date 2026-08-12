@@ -1,0 +1,53 @@
+\set ON_ERROR_STOP on
+\getenv dr_jwt_secret JWT_SECRET
+\getenv dr_jwt_exp JWT_EXP
+\getenv dr_database_name POSTGRES_DB
+
+\if :{?dr_jwt_secret}
+SELECT octet_length(:'dr_jwt_secret') >= 32 AS dr_jwt_secret_valid \gset
+\else
+\warn 'FATAL: JWT_SECRET est obligatoire pour le bootstrap DR.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :dr_jwt_secret_valid
+\else
+\warn 'FATAL: JWT_SECRET doit contenir au moins 32 octets.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :{?dr_jwt_exp}
+SELECT :'dr_jwt_exp' ~ '^[1-9][0-9]*$' AS dr_jwt_exp_valid \gset
+\else
+\warn 'FATAL: JWT_EXP est obligatoire pour le bootstrap DR.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :dr_jwt_exp_valid
+\else
+\warn 'FATAL: JWT_EXP doit être un entier strictement positif.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :{?dr_database_name}
+SELECT :'dr_database_name' = 'postgres' AS dr_database_name_valid \gset
+\else
+\warn 'FATAL: POSTGRES_DB est obligatoire pour le bootstrap DR.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :dr_database_name_valid
+\else
+\warn 'FATAL: ce bootstrap validé cible exclusivement POSTGRES_DB=postgres.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+ALTER DATABASE :"dr_database_name" SET "app.settings.jwt_secret" TO :'dr_jwt_secret';
+ALTER DATABASE :"dr_database_name" SET "app.settings.jwt_exp" TO :'dr_jwt_exp';
+
+\unset dr_jwt_secret
+\unset dr_jwt_secret_valid
+\unset dr_jwt_exp
+\unset dr_jwt_exp_valid
+\unset dr_database_name
+\unset dr_database_name_valid

@@ -1,5 +1,5 @@
 {
-  "name": "@olivier/api",
+  "name": "@corsica/planning-api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,8 @@
     "dev": "nest start --watch",
     "lint": "eslint . --max-warnings=0",
     "start": "node dist/main.js",
+    "start:worker": "node dist/worker.js",
+    "health:worker": "node dist/worker-health.js",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },
@@ -22,22 +24,21 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "exceljs": "4.4.0",
+    "fastify": "^5.10.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.1.28",
+    "@eslint/js": "^9.39.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
-    "source-map-support": "^0.5.21",
     "ts-jest": "^29.4.0",
-    "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.64.0"
   }

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 
 import { AccessControlService } from './access-control.service';
 import { AuthGuard } from './auth.guard';
@@ -8,11 +7,7 @@ import { RolesGuard } from './roles.guard';
 
 @Module({
   controllers: [MeController],
-  providers: [
-    AccessControlService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
-  ],
-  exports: [AccessControlService],
+  providers: [AccessControlService, AuthGuard, RolesGuard],
+  exports: [AccessControlService, AuthGuard, RolesGuard],
 })
 export class AuthModule {}

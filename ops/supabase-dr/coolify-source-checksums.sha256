@@ -1,0 +1,6 @@
+# Copies bit-for-bit observed on 2026-08-11; roles.sql and jwt.sql are deliberately excluded.
+9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f  bootstrap/_supabase.sql
+e29054f1f84f7ab71ca68debb633b87308ef5af3013255b4bbc599afe075be33  bootstrap/logs.sql
+4ddfcb29bd20a5d2f2c324316b3e4dd3b4255719b23bd1ec6339476f721c096e  bootstrap/pooler.sql
+7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88  bootstrap/realtime.sql
+33a52908f173282a50aaab03b448d59d0658bfa9bfa4c803f5c0ac3b0092d7aa  bootstrap/webhooks.sql

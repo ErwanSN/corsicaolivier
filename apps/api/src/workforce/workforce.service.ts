@@ -4,12 +4,16 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 import type { AuthIdentity } from '../auth/auth-context';
 import { throwForSupabaseError } from '../common/supabase-error';
+import { nullableRpcArgs } from '../database/database.aliases';
 import type { Database } from '../database/database.types';
 import { SupabaseService } from '../database/supabase.service';
 import type {
   AddGroupMemberDto,
+  CreateAgentUnavailabilityDto,
   CreateGroupDto,
+  EndAgentUnavailabilityDto,
   EndGroupMembershipDto,
+  ListAgentUnavailabilityQuery,
   SetAgentContractDto,
   SetAgentSkillDto,
   SetGroupHourTargetsDto,
@@ -21,6 +25,25 @@ import type {
 
 type AgentGroup = Database['public']['Tables']['agent_groups']['Row'];
 type HourTarget = Database['public']['Tables']['hour_target_overrides']['Row'];
+type AgentUnavailability =
+  Database['public']['Tables']['agent_unavailability']['Row'];
+type AgentUnavailabilityPage = Readonly<{
+  items: AgentUnavailability[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
+
+function escapePostgrestLikeTerm(value: string): string {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', '\\"')
+    .replaceAll('%', '\\%')
+    .replaceAll('_', '\\_')
+    .replaceAll('*', '\\*');
+}
 
 @Injectable()
 export class WorkforceService {
@@ -115,18 +138,15 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(accessToken)
-      .from('agent_contract_versions')
-      .insert({
-        organization_id: input.organizationId,
-        agent_id: agentId,
-        effective_from: input.effectiveFrom,
-        effective_until: input.effectiveUntil,
-        weekly_target_minutes: input.weeklyTargetMinutes,
-        monthly_target_minutes: input.monthlyTargetMinutes,
-        label: input.label,
-      })
-      .select()
-      .single();
+      .rpc('replace_agent_contract', {
+        target_agent_id: agentId,
+        target_organization_id: input.organizationId,
+        new_effective_from: input.effectiveFrom,
+        new_effective_until: input.effectiveUntil,
+        new_weekly_target_minutes: input.weeklyTargetMinutes,
+        new_monthly_target_minutes: input.monthlyTargetMinutes,
+        new_label: input.label,
+      });
 
     throwForSupabaseError(error, 'création de la version contractuelle');
     return this.requireData(data, 'Contrat créé sans réponse.');
@@ -162,17 +182,14 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(accessToken)
-      .from('agent_group_memberships')
-      .insert({
-        organization_id: input.organizationId,
-        group_id: groupId,
-        agent_id: input.agentId,
-        effective_from: input.effectiveFrom,
-        effective_until: input.effectiveUntil,
-        is_primary: input.isPrimary,
-      })
-      .select()
-      .single();
+      .rpc('replace_agent_group_membership', {
+        target_group_id: groupId,
+        target_agent_id: input.agentId,
+        target_organization_id: input.organizationId,
+        new_effective_from: input.effectiveFrom,
+        new_effective_until: input.effectiveUntil,
+        new_is_primary: input.isPrimary,
+      });
 
     throwForSupabaseError(error, 'rattachement au groupe');
     return this.requireData(data, 'Rattachement créé sans réponse.');
@@ -207,13 +224,12 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(accessToken)
-      .from('agent_group_memberships')
-      .update({ effective_until: input.effectiveUntil })
-      .eq('id', membershipId)
-      .eq('group_id', groupId)
-      .eq('organization_id', input.organizationId)
-      .select()
-      .single();
+      .rpc('end_agent_group_membership', {
+        target_group_id: groupId,
+        target_membership_id: membershipId,
+        target_organization_id: input.organizationId,
+        new_effective_until: input.effectiveUntil,
+      });
 
     throwForSupabaseError(error, 'retrait du collaborateur');
     return this.requireData(data, 'Rattachement modifié sans réponse.');
@@ -223,29 +239,27 @@ export class WorkforceService {
     auth: AuthIdentity,
     input: SetHourTargetDto,
   ): Promise<HourTarget> {
-    const { data, error } = await this.supabase
-      .forUser(auth.accessToken)
-      .from('hour_target_overrides')
-      .upsert(
-        {
-          organization_id: input.organizationId,
-          site_id: input.siteId,
-          agent_id: input.agentId,
-          group_id: input.groupId,
-          week_start: input.weekStart,
-          target_minutes: input.targetMinutes,
-          reason: input.reason,
-          created_by: auth.userId,
-        },
-        {
-          onConflict: 'agent_id,group_id,week_start',
-        },
-      )
-      .select()
-      .single();
+    const { data, error } = await this.supabase.forUser(auth.accessToken).rpc(
+      'set_hour_target_override',
+      nullableRpcArgs<
+        'set_hour_target_override',
+        'target_site_id' | 'target_agent_id' | 'target_group_id'
+      >({
+        target_organization_id: input.organizationId,
+        target_site_id: input.siteId ?? null,
+        target_agent_id: input.agentId ?? null,
+        target_group_id: input.groupId ?? null,
+        target_week_start: input.weekStart,
+        new_target_minutes: input.targetMinutes,
+        new_reason: input.reason,
+      }),
+    );
 
     throwForSupabaseError(error, 'mise à jour de l’objectif horaire');
-    return this.requireData(data, 'Objectif créé sans réponse.');
+    return this.requireData(
+      data,
+      'Objectif créé sans réponse.',
+    ) as unknown as HourTarget;
   }
 
   async getHourBalance(
@@ -273,20 +287,16 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(auth.accessToken)
-      .from('agent_position_preferences')
-      .insert({
-        organization_id: input.organizationId,
-        agent_id: agentId,
-        position_id: input.positionId,
-        level: input.level,
-        priority: input.priority,
-        note: input.note,
-        valid_from: input.validFrom,
-        valid_until: input.validUntil,
-        created_by: auth.userId,
-      })
-      .select()
-      .single();
+      .rpc('replace_agent_position_preference', {
+        target_agent_id: agentId,
+        target_organization_id: input.organizationId,
+        target_position_id: input.positionId,
+        new_level: input.level,
+        new_priority: input.priority,
+        new_note: input.note,
+        new_valid_from: input.validFrom,
+        new_valid_until: input.validUntil,
+      });
 
     throwForSupabaseError(error, 'enregistrement de la préférence');
     return this.requireData(data, 'Préférence créée sans réponse.');
@@ -299,18 +309,14 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(auth.accessToken)
-      .from('agent_position_restrictions')
-      .insert({
-        organization_id: input.organizationId,
-        agent_id: agentId,
-        position_id: input.positionId,
-        reason: input.reason,
-        valid_from: input.validFrom,
-        valid_until: input.validUntil,
-        created_by: auth.userId,
-      })
-      .select()
-      .single();
+      .rpc('replace_agent_position_restriction', {
+        target_agent_id: agentId,
+        target_organization_id: input.organizationId,
+        target_position_id: input.positionId,
+        new_reason: input.reason,
+        new_valid_from: input.validFrom,
+        new_valid_until: input.validUntil,
+      });
 
     throwForSupabaseError(error, 'enregistrement de la restriction');
     return this.requireData(data, 'Restriction créée sans réponse.');
@@ -335,18 +341,14 @@ export class WorkforceService {
   ) {
     const { data, error } = await this.supabase
       .forUser(auth.accessToken)
-      .from('agent_skills')
-      .insert({
-        organization_id: input.organizationId,
-        agent_id: agentId,
-        skill_id: input.skillId,
-        level: input.level,
-        valid_from: input.validFrom,
-        valid_until: input.validUntil,
-        verified_by: auth.userId,
-      })
-      .select()
-      .single();
+      .rpc('replace_agent_skill', {
+        target_agent_id: agentId,
+        target_organization_id: input.organizationId,
+        target_skill_id: input.skillId,
+        new_level: input.level,
+        new_valid_from: input.validFrom,
+        new_valid_until: input.validUntil,
+      });
 
     throwForSupabaseError(error, 'attribution de la compétence');
     return this.requireData(data, 'Compétence attribuée sans réponse.');
@@ -387,6 +389,101 @@ export class WorkforceService {
 
     throwForSupabaseError(error, 'configuration des exigences du poste');
     return this.requireData(data, 'Exigence enregistrée sans réponse.');
+  }
+
+  async listAgentUnavailability(
+    accessToken: string,
+    agentId: string,
+    input: ListAgentUnavailabilityQuery,
+  ): Promise<AgentUnavailabilityPage> {
+    const client = this.supabase.forUser(accessToken);
+    const requestedPage = input.page ?? 1;
+    const pageSize = input.pageSize ?? 20;
+    const scope = input.scope ?? 'all';
+    const search = input.q?.trim();
+    const now = new Date().toISOString();
+    const pageQuery = (page: number) => {
+      let query = client
+        .from('agent_unavailability')
+        .select('*', { count: 'exact' })
+        .eq('agent_id', agentId)
+        .order('starts_at', { ascending: scope === 'upcoming' })
+        .order('id')
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
+      if (scope === 'upcoming') query = query.gt('ends_at', now);
+      if (scope === 'past') query = query.lte('ends_at', now);
+      if (search) {
+        const term = `%${escapePostgrestLikeTerm(search)}%`;
+        query = query.ilike('note', term);
+      }
+
+      return query;
+    };
+
+    const initialPage = await pageQuery(requestedPage);
+    throwForSupabaseError(initialPage.error, 'chargement des indisponibilités');
+    const total = initialPage.count ?? 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    let items = initialPage.data ?? [];
+
+    if (page !== requestedPage) {
+      const resolvedPage = await pageQuery(page);
+      throwForSupabaseError(
+        resolvedPage.error,
+        'chargement des indisponibilités',
+      );
+      items = resolvedPage.data ?? [];
+    }
+
+    return {
+      items,
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    };
+  }
+
+  async createAgentUnavailability(
+    auth: AuthIdentity,
+    agentId: string,
+    input: CreateAgentUnavailabilityDto,
+  ) {
+    const { data, error } = await this.supabase
+      .forUser(auth.accessToken)
+      .rpc('create_agent_unavailability', {
+        target_agent_id: agentId,
+        target_organization_id: input.organizationId,
+        target_site_id: input.siteId,
+        new_kind: input.kind,
+        new_starts_at: input.startsAt,
+        new_ends_at: input.endsAt,
+        new_note: input.note,
+      });
+
+    throwForSupabaseError(error, 'création de l’indisponibilité');
+    return this.requireData(data, 'Indisponibilité créée sans réponse.');
+  }
+
+  async endAgentUnavailability(
+    accessToken: string,
+    agentId: string,
+    unavailabilityId: string,
+    input: EndAgentUnavailabilityDto,
+  ) {
+    const { data, error } = await this.supabase
+      .forUser(accessToken)
+      .rpc('end_agent_unavailability', {
+        target_unavailability_id: unavailabilityId,
+        target_agent_id: agentId,
+        new_ends_at: input.endsAt,
+      });
+
+    throwForSupabaseError(error, 'fin de l’indisponibilité');
+    return this.requireData(data, 'Indisponibilité terminée sans réponse.');
   }
 
   private requireData<T>(data: T | null, message: string): T {

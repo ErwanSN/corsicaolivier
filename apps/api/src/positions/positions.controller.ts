@@ -20,6 +20,9 @@ export class PositionsController {
       requireAuth(auth).accessToken,
       query.organizationId,
       query.siteId,
+      query.page,
+      query.pageSize,
+      query.q,
     );
   }
 

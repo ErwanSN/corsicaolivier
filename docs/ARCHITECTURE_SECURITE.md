@@ -16,6 +16,13 @@ aux traitements système explicitement isolés : worker d’outbox, intégration
 maintenance. Elle ne doit jamais être utilisée pour une requête métier ordinaire, car
 elle contourne la RLS.
 
+Les opérations de connexion et MFA restent dans des Server Actions. Le serveur Next
+joint GoTrue directement sur un réseau point-à-point web↔Auth et remplace le header de
+limitation par un HMAC distinct par compte, facteur ou session. Le secret HMAC ne donne
+aucun privilège Supabase et ne quitte pas le web. Le navigateur, Kong, l’API métier, le
+worker et les autres services Supabase ne rejoignent pas ce réseau. Le chemin Auth public
+reste Traefik→Kong ; ses headers transférés sont neutralisés par la frontière Traefik.
+
 ## 2. Autorisations
 
 Les rôles sont `platform_admin`, `planning_admin`, `planner`, `approver`, `supervisor`,
@@ -69,10 +76,10 @@ une limitation globale du débit.
 
 - Secrets en coffre de secrets par environnement, rotation documentée et jamais dans Git.
 - Clé publiable côté web/API métier ; clé secrète uniquement dans un worker système isolé.
-- Les scénarios automatisés utilisent uniquement des agents `[DEMO]`. Le seed local
-  historique contient toutefois des noms issus du corpus ; il est réservé aux
-  environnements autorisés et doit être anonymisé avant toute généralisation.
-- Le corpus reste une source d’analyse locale et ne fait pas partie des artifacts de build.
+- Les scénarios automatisés et le seed local utilisent uniquement des identités
+  explicitement fictives.
+- Les sources métier contenant des données personnelles restent dans un stockage
+  contrôlé ; `corpus/` est ignoré par Git et absent des artifacts de build.
 - Les durées de conservation, droits d’accès, finalités et exports RGPD restent à valider avec le DPO.
 
 ## 6. Exploitation cible

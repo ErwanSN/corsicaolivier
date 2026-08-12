@@ -5,9 +5,20 @@ import type { Database } from '../database/database.types';
 type Row<TableName extends keyof Database['public']['Tables']> =
   Database['public']['Tables'][TableName]['Row'];
 
+export type PlanningRequirement = Pick<
+  Row<'staffing_requirements'>,
+  | 'id'
+  | 'position_id'
+  | 'port_call_id'
+  | 'starts_at'
+  | 'ends_at'
+  | 'required_agents'
+>;
+
 export type PlanningExportData = Readonly<{
   agents: Row<'agents'>[];
   assignments: Row<'shift_assignments'>[];
+  breaks: Row<'planning_shift_breaks'>[];
   forecasts: Row<'call_load_forecasts'>[];
   period: Pick<
     Row<'planning_periods'>,
@@ -15,7 +26,7 @@ export type PlanningExportData = Readonly<{
   >;
   portCalls: Row<'port_calls'>[];
   positions: Row<'positions'>[];
-  requirements: Row<'staffing_requirements'>[];
+  requirements: PlanningRequirement[];
   shifts: Row<'planning_shifts'>[];
   siteName: string;
   vessels: Row<'vessels'>[];
@@ -65,6 +76,12 @@ export async function buildPlanningWorkbook(
   );
   const agentById = new Map(data.agents.map((agent) => [agent.id, agent]));
   const shiftById = new Map(data.shifts.map((shift) => [shift.id, shift]));
+  const breaksByShiftId = new Map<string, Row<'planning_shift_breaks'>[]>();
+  for (const shiftBreak of data.breaks) {
+    const existing = breaksByShiftId.get(shiftBreak.planning_shift_id) ?? [];
+    existing.push(shiftBreak);
+    breaksByShiftId.set(shiftBreak.planning_shift_id, existing);
+  }
   const vesselById = new Map(data.vessels.map((vessel) => [vessel.id, vessel]));
   const latestForecastByCall = latestForecasts(data.forecasts);
 
@@ -243,15 +260,35 @@ export async function buildPlanningWorkbook(
       const assignmentLines = assignments.map((assignment) => {
         const shift = shiftById.get(assignment.planning_shift_id);
         const agent = shift ? agentById.get(shift.agent_id) : undefined;
-        return `${agent?.display_name ?? 'Agent'}\n${timeLabel(assignment.starts_at, data.period.timezone)}–${timeLabel(assignment.ends_at, data.period.timezone)}`;
+        const pauses = (breaksByShiftId.get(assignment.planning_shift_id) ?? [])
+          .filter(
+            (shiftBreak) =>
+              new Date(shiftBreak.starts_at).getTime() <
+                new Date(assignment.ends_at).getTime() &&
+              new Date(shiftBreak.ends_at).getTime() >
+                new Date(assignment.starts_at).getTime(),
+          )
+          .map(
+            (shiftBreak) =>
+              `Pause ${timeLabel(shiftBreak.starts_at, data.period.timezone)}–${timeLabel(shiftBreak.ends_at, data.period.timezone)}`,
+          );
+        return [
+          agent?.display_name ?? 'Agent',
+          `${timeLabel(assignment.starts_at, data.period.timezone)}–${timeLabel(assignment.ends_at, data.period.timezone)}`,
+          ...pauses,
+        ].join('\n');
       });
       const underCovered = requirements.some(
         (requirement) =>
-          minimumConcurrentCoverage(requirement, assignments) <
+          minimumConcurrentCoverage(requirement, assignments, breaksByShiftId) <
           requirement.required_agents,
       );
       const requirementLines = requirements.map((requirement) => {
-        const covered = minimumConcurrentCoverage(requirement, assignments);
+        const covered = minimumConcurrentCoverage(
+          requirement,
+          assignments,
+          breaksByShiftId,
+        );
         return `Besoin ${timeLabel(requirement.starts_at, data.period.timezone)}–${timeLabel(requirement.ends_at, data.period.timezone)} · ${covered}/${requirement.required_agents}`;
       });
 
@@ -390,25 +427,28 @@ function latestForecasts(
 }
 
 function minimumConcurrentCoverage(
-  requirement: Row<'staffing_requirements'>,
+  requirement: PlanningRequirement,
   assignments: Row<'shift_assignments'>[],
+  breaksByShiftId: ReadonlyMap<string, Row<'planning_shift_breaks'>[]>,
 ): number {
   const requirementStart = new Date(requirement.starts_at).getTime();
   const requirementEnd = new Date(requirement.ends_at).getTime();
   const relevant = assignments
     .filter(
-      (assignment) =>
-        assignment.staffing_requirement_id === requirement.id ||
-        (!assignment.staffing_requirement_id &&
-          assignment.port_call_id === requirement.port_call_id),
+      (assignment) => assignment.staffing_requirement_id === requirement.id,
     )
-    .map((assignment) => ({
-      start: Math.max(
-        requirementStart,
-        new Date(assignment.starts_at).getTime(),
+    .flatMap((assignment) =>
+      subtractBreaks(
+        {
+          start: Math.max(
+            requirementStart,
+            new Date(assignment.starts_at).getTime(),
+          ),
+          end: Math.min(requirementEnd, new Date(assignment.ends_at).getTime()),
+        },
+        breaksByShiftId.get(assignment.planning_shift_id) ?? [],
       ),
-      end: Math.min(requirementEnd, new Date(assignment.ends_at).getTime()),
-    }))
+    )
     .filter((interval) => interval.end > interval.start);
   const boundaries = [
     requirementStart,
@@ -428,6 +468,34 @@ function minimumConcurrentCoverage(
     minimum = Math.min(minimum, coverage);
   }
   return Number.isFinite(minimum) ? minimum : 0;
+}
+
+function subtractBreaks(
+  interval: Readonly<{ start: number; end: number }>,
+  shiftBreaks: Row<'planning_shift_breaks'>[],
+): Array<{ start: number; end: number }> {
+  let available = [interval];
+
+  for (const shiftBreak of shiftBreaks) {
+    const breakStart = new Date(shiftBreak.starts_at).getTime();
+    const breakEnd = new Date(shiftBreak.ends_at).getTime();
+    available = available.flatMap((current) => {
+      if (breakEnd <= current.start || breakStart >= current.end) {
+        return [current];
+      }
+
+      const fragments: Array<{ start: number; end: number }> = [];
+      if (breakStart > current.start) {
+        fragments.push({ start: current.start, end: breakStart });
+      }
+      if (breakEnd < current.end) {
+        fragments.push({ start: breakEnd, end: current.end });
+      }
+      return fragments;
+    });
+  }
+
+  return available.filter((current) => current.end > current.start);
 }
 
 function slug(value: string): string {

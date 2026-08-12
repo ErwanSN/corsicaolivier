@@ -1,0 +1,4 @@
+# Point de coupure approuvé pour la barrière anti-récidive.
+# Cette valeur ne certifie pas l'historique antérieur et ne doit être avancée
+# qu'après revue sécurité et protection des données.
+8e38583a36918bd9b685206e0eebcba360ccbb4d

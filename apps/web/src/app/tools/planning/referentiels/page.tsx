@@ -4,7 +4,7 @@ import { SiteSwitcher } from '../../../../components/site-switcher';
 import { PlatformSelect } from '../../../../components/ui/platform-select';
 import { apiFetch } from '../../../../lib/api/server';
 import type {
-  Position,
+  PositionSearchPage,
   PositionSkillRequirement,
   Site,
   Skill,
@@ -23,6 +23,8 @@ type ReferentielsPageProps = Readonly<{
     add?: string;
     error?: string;
     position?: string;
+    positionPage?: string;
+    positionQ?: string;
     saved?: string;
     site?: string;
   }>;
@@ -35,10 +37,24 @@ export default async function ReferentielsPage({
   const sitesResult = await apiFetch<Site[]>('/sites');
   const sites = orderSites(sitesResult.data ?? []);
   const site = sites.find((item) => item.id === params.site) ?? sites.at(0);
+  const positionQuery = params.positionQ?.trim().slice(0, 80) ?? '';
+  const requestedPositionPage = Math.max(
+    1,
+    Number.parseInt(params.positionPage ?? '1', 10) || 1,
+  );
+  const positionSearch = site
+    ? new URLSearchParams({
+        organizationId: site.organization_id,
+        page: String(requestedPositionPage),
+        pageSize: '24',
+        siteId: site.id,
+      })
+    : null;
+  if (positionQuery) positionSearch?.set('q', positionQuery);
   const [positionsResult, skillsResult, vesselsResult] = site
     ? await Promise.all([
-        apiFetch<Position[]>(
-          `/positions?organizationId=${encodeURIComponent(site.organization_id)}&siteId=${encodeURIComponent(site.id)}`,
+        apiFetch<PositionSearchPage>(
+          `/positions?${positionSearch?.toString() ?? ''}`,
         ),
         apiFetch<Skill[]>(
           `/skills?organizationId=${encodeURIComponent(site.organization_id)}`,
@@ -48,11 +64,11 @@ export default async function ReferentielsPage({
         ),
       ])
     : [
-        { data: [] as Position[], error: sitesResult.error },
+        { data: null, error: sitesResult.error },
         { data: [] as Skill[], error: sitesResult.error },
         { data: [] as Vessel[], error: sitesResult.error },
       ];
-  const positions = positionsResult.data ?? [];
+  const positions = positionsResult.data?.items ?? [];
   const skills = skillsResult.data ?? [];
   const vessels = vesselsResult.data ?? [];
   const selectedPosition = positions.find(
@@ -65,6 +81,14 @@ export default async function ReferentielsPage({
     : { data: [] as PositionSkillRequirement[], error: null };
   const requirements = requirementsResult.data ?? [];
   const skillById = new Map(skills.map((skill) => [skill.id, skill]));
+  const positionLinkParams = new URLSearchParams({ site: site?.id ?? '' });
+  if (positionQuery) positionLinkParams.set('positionQ', positionQuery);
+  if ((positionsResult.data?.page ?? 1) > 1) {
+    positionLinkParams.set(
+      'positionPage',
+      String(positionsResult.data?.page ?? 1),
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -106,7 +130,10 @@ export default async function ReferentielsPage({
         aria-label="Autres réglages"
         className="flex flex-wrap gap-2 border border-zinc-200 bg-white p-3"
       >
-        <Link className="secondary-button" href="/tools/planning/zones">
+        <Link
+          className="secondary-button"
+          href={`/tools/planning/zones?site=${site?.id ?? ''}`}
+        >
           Zones
         </Link>
         <Link
@@ -314,12 +341,43 @@ export default async function ReferentielsPage({
         </p>
       ) : null}
 
+      <details
+        className="rounded-xl border border-zinc-200 bg-white px-4 py-3"
+        open={Boolean(positionQuery)}
+      >
+        <summary className="cursor-pointer text-sm font-semibold">
+          Rechercher un poste
+          {positionsResult.data
+            ? ` · ${positionsResult.data.total} au total`
+            : ''}
+        </summary>
+        <form className="mt-3 flex flex-col gap-2 sm:flex-row" method="get">
+          <input name="site" type="hidden" value={site?.id ?? ''} />
+          <input
+            className="field-input min-w-0 flex-1"
+            defaultValue={positionQuery}
+            maxLength={80}
+            name="positionQ"
+            placeholder="Nom ou code du poste"
+            type="search"
+          />
+          <button className="secondary-button" type="submit">
+            Rechercher
+          </button>
+          {positionQuery ? (
+            <Link className="secondary-button" href={`?site=${site?.id ?? ''}`}>
+              Effacer
+            </Link>
+          ) : null}
+        </form>
+      </details>
+
       <section className="grid gap-5 lg:grid-cols-3">
         <ReferentialList
           description="Fonctions de travail affectables dans un shift."
           empty="Aucun poste défini."
           items={positions}
-          linkPrefix={`?site=${site?.id ?? ''}&position=`}
+          linkPrefix={`?${positionLinkParams.toString()}&position=`}
           title="Postes opérationnels"
         />
         <ReferentialList
@@ -335,6 +393,46 @@ export default async function ReferentielsPage({
           title="Navires"
         />
       </section>
+
+      {(positionsResult.data?.totalPages ?? 1) > 1 ? (
+        <nav
+          aria-label="Pagination des postes"
+          className="flex items-center justify-between gap-3 text-sm"
+        >
+          {positionsResult.data && positionsResult.data.page > 1 ? (
+            <Link
+              className="secondary-button"
+              href={`?${new URLSearchParams({
+                site: site?.id ?? '',
+                positionPage: String(positionsResult.data.page - 1),
+                ...(positionQuery ? { positionQ: positionQuery } : {}),
+              }).toString()}`}
+            >
+              ← Précédents
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-zinc-500">
+            Page {positionsResult.data?.page} sur{' '}
+            {positionsResult.data?.totalPages}
+          </span>
+          {positionsResult.data?.hasMore ? (
+            <Link
+              className="secondary-button"
+              href={`?${new URLSearchParams({
+                site: site?.id ?? '',
+                positionPage: String((positionsResult.data?.page ?? 1) + 1),
+                ...(positionQuery ? { positionQ: positionQuery } : {}),
+              }).toString()}`}
+            >
+              Suivants →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      ) : null}
     </div>
   );
 }

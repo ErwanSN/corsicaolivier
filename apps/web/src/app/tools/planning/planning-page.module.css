@@ -31,7 +31,9 @@
   top: 0;
   z-index: 50;
   display: flex;
-  min-height: 3.1rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 3.4rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.35rem;
@@ -61,7 +63,7 @@
 .todayButton,
 .menu > summary {
   display: inline-flex;
-  height: 2.4rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   border: 1px solid #a1a1aa;
@@ -72,8 +74,8 @@
 }
 
 .arrowButton {
-  width: 2.4rem;
-  flex: 0 0 2.4rem;
+  width: 2.75rem;
+  flex: 0 0 2.75rem;
   font-size: 1rem;
 }
 
@@ -87,6 +89,16 @@
 .menu > summary:hover {
   border-color: #18181b;
   background: #f4f4f5;
+}
+
+.arrowButton:focus-visible,
+.todayButton:focus-visible,
+.menu > summary:focus-visible,
+.siteLink:focus-visible,
+.activeSiteLink:focus-visible,
+.versionNavigation a:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .weekLabel {
@@ -222,6 +234,33 @@
   font-weight: 750;
 }
 
+.versionNavigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: -0.35rem 0 1rem;
+  border: 1px solid #a1a1aa;
+  background: #a1a1aa;
+}
+
+.versionNavigation a {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 0.45rem 0.6rem;
+  color: #3f3f46;
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-align: center;
+}
+
+.versionNavigation a[aria-current='page'] {
+  background: #18181b;
+  color: #ffffff;
+}
+
 .publishSection {
   margin-bottom: 1rem;
   padding-bottom: 1rem;
@@ -315,6 +354,213 @@
   display: none;
 }
 
+.workforceConflictNotice {
+  border: 1px solid #fca5a5;
+  background: #fffafa;
+}
+
+.workforceConflictNotice > summary {
+  display: flex;
+  min-height: 2.75rem;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  color: #7f1d1d;
+  font-size: 0.76rem;
+}
+
+.workforceConflictNotice > summary::-webkit-details-marker {
+  display: none;
+}
+
+.workforceConflictNotice > summary > span {
+  display: inline-flex;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 1.35rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 850;
+}
+
+.workforceConflictNotice > summary > small {
+  margin-left: auto;
+  color: #991b1b;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.workforceConflictNotice[open] > summary {
+  border-bottom: 1px solid #fecaca;
+}
+
+.workforceConflictNotice > summary:focus-visible,
+.workforceConflictBody a:focus-visible,
+.workforceConflictBody button:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.workforceConflictBody {
+  padding: 0.7rem 0.75rem 0.75rem;
+}
+
+.workforceConflictBody > p,
+.workforceConflictBody > small {
+  color: #78716c;
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.workforceConflictMore {
+  margin-top: 0.35rem;
+  border-top: 1px solid #fee2e2;
+}
+
+.workforceConflictMore > summary {
+  width: fit-content;
+  cursor: pointer;
+  padding: 0.55rem 0;
+  color: #991b1b;
+  font-size: 0.69rem;
+  font-weight: 750;
+}
+
+.workforceConflictMore > ul {
+  margin-top: 0;
+}
+
+.workforceConflictBody ul {
+  display: grid;
+  gap: 0;
+  margin-top: 0.55rem;
+  padding: 0;
+  list-style: none;
+}
+
+.workforceConflictBody li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  border-top: 1px solid #fee2e2;
+  padding: 0.55rem 0;
+}
+
+.workforceConflictBody li > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.workforceConflictBody a {
+  width: fit-content;
+  color: #7f1d1d;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.workforceConflictBody li span {
+  overflow: hidden;
+  color: #57534e;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workforceConflictActions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.workforceConflictActions :global(.secondary-button) {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.disruptionPanel {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  padding: 0.85rem;
+}
+
+.disruptionHeading h2 {
+  color: #78350f;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.disruptionHeading p,
+.disruptionItem p,
+.disruptionItem small {
+  margin-top: 0.2rem;
+  color: #78716c;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.disruptionList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.disruptionItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+  border-top: 1px solid #fde68a;
+  padding-top: 0.65rem;
+}
+
+.disruptionItem strong {
+  color: #292524;
+  font-size: 0.78rem;
+}
+
+.disruptionItem summary {
+  cursor: pointer;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.disruptionItem form {
+  display: grid;
+  min-width: min(21rem, calc(100vw - 3rem));
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.disruptionItem label {
+  color: #57534e;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.rejectScenario {
+  margin-top: 0.75rem;
+  border-top: 1px solid #e7e5e4;
+  padding-top: 0.65rem;
+}
+
+.rejectScenario > summary {
+  color: #57534e;
+}
+
 @media (max-width: 1023px) {
   .toolbar {
     top: 4rem;
@@ -337,7 +583,8 @@
   }
 
   .weekNavigation {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .weekLabel {
@@ -371,6 +618,74 @@
 
   .exportActions {
     grid-template-columns: 1fr;
+  }
+
+  .disruptionItem {
+    grid-template-columns: 1fr;
+  }
+
+  .workforceConflictBody li {
+    grid-template-columns: 1fr;
+  }
+
+  .workforceConflictBody li span {
+    white-space: normal;
+  }
+
+  .workforceConflictActions {
+    flex-wrap: wrap;
+  }
+
+  .disruptionItem summary {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 420px) {
+  .toolbar {
+    gap: 0.2rem;
+    padding: 0.2rem;
+  }
+
+  .toolbarPrimary {
+    gap: 0.1rem;
+  }
+
+  .siteMenu > summary,
+  .siteLabel {
+    max-width: 4.25rem;
+    padding: 0 0.4rem;
+  }
+
+  .arrowButton {
+    width: 2.4rem;
+    flex-basis: 2.4rem;
+  }
+
+  .weekLabel {
+    padding: 0 0.1rem;
+  }
+
+  .weekLabel strong {
+    font-size: 0.67rem;
+  }
+
+  .todayButton {
+    display: none;
+  }
+
+  .actionsMenu > summary {
+    padding: 0 0.45rem;
+    font-size: 0.68rem;
+  }
+
+  .actionsPanel {
+    position: fixed;
+    top: 7.35rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-height: calc(100svh - 11.75rem);
   }
 }
 

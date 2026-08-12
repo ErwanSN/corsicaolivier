@@ -8,11 +8,30 @@ import { LoginForm } from './login-form';
 
 export default async function LoginPage() {
   const supabase = await createSupabaseServerClient();
-  const { data } = (await supabase?.auth.getClaims()) ?? { data: null };
+  let authUnavailable = false;
+  let destination: '/tools' | '/mfa' | null = null;
 
-  if (data?.claims) {
-    redirect('/tools');
+  if (supabase) {
+    try {
+      const identity = await supabase.auth.getUser();
+      authUnavailable = Boolean(identity.error);
+
+      if (identity.data.user && !identity.error) {
+        const assurance =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assurance.error || !assurance.data?.currentLevel) {
+          authUnavailable = true;
+        } else {
+          destination =
+            assurance.data.currentLevel === 'aal2' ? '/tools' : '/mfa';
+        }
+      }
+    } catch {
+      authUnavailable = true;
+    }
   }
+
+  if (destination) redirect(destination);
 
   return (
     <main className="grid min-h-svh bg-white lg:grid-cols-[minmax(0,1.2fr)_minmax(28rem,0.8fr)]">
@@ -50,7 +69,18 @@ export default async function LoginPage() {
           </header>
 
           {supabase ? (
-            <LoginForm />
+            <>
+              {authUnavailable ? (
+                <p
+                  className="mt-8 border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+                  role="alert"
+                >
+                  Le service de sécurité répond mal. Vous pouvez réessayer sans
+                  quitter cette page.
+                </p>
+              ) : null}
+              <LoginForm />
+            </>
           ) : (
             <div
               className="mt-8 border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"

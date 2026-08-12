@@ -12,11 +12,40 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class ListGroupsQuery {
   @IsOptional()
   @IsUUID()
   declare siteId?: string;
+}
+
+export class ListAgentUnavailabilityQuery {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  declare page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  declare pageSize?: number;
+
+  @IsOptional()
+  @IsEnum(['upcoming', 'past', 'all'])
+  declare scope?: 'upcoming' | 'past' | 'all';
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @Length(1, 80)
+  declare q?: string;
 }
 
 export class GetHourBalanceQuery {
@@ -247,4 +276,31 @@ export class SetPositionSkillRequirementDto {
 
   @IsBoolean()
   declare mandatory: boolean;
+}
+
+export class CreateAgentUnavailabilityDto {
+  @IsUUID()
+  declare organizationId: string;
+
+  @IsUUID()
+  declare siteId: string;
+
+  @IsEnum(['leave', 'training', 'medical', 'rest', 'other'])
+  declare kind: 'leave' | 'training' | 'medical' | 'rest' | 'other';
+
+  @IsDateString()
+  declare startsAt: string;
+
+  @IsDateString()
+  declare endsAt: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 500)
+  declare note?: string;
+}
+
+export class EndAgentUnavailabilityDto {
+  @IsDateString()
+  declare endsAt: string;
 }

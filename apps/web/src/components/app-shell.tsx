@@ -2,14 +2,20 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 
 import corsicaLogo from '../assets/brand/corsica-linea.webp';
+import type { AgentNotification } from '../lib/api/types';
+import { NotificationCenter } from './notification-center';
 
 type AppShellProps = Readonly<{
   children: ReactNode;
+  notificationHasMore: boolean;
+  notificationLoadError: boolean;
+  notificationTotal: number;
+  notifications: ReadonlyArray<AgentNotification>;
   userLabel: string;
 }>;
 
@@ -41,6 +47,12 @@ function isCurrentPath(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
+function navigationHref(href: string, siteId: string | null): string {
+  if (!siteId) return href;
+  const params = new URLSearchParams({ site: siteId });
+  return `${href}?${params.toString()}`;
+}
+
 function LogoutButton({ compact = false }: Readonly<{ compact?: boolean }>) {
   const { pending } = useFormStatus();
 
@@ -55,13 +67,32 @@ function LogoutButton({ compact = false }: Readonly<{ compact?: boolean }>) {
       disabled={pending}
       type="submit"
     >
-      {pending ? 'Déconnexion…' : compact ? 'Déconnexion' : 'Se déconnecter'}
+      {pending ? (
+        'Déconnexion…'
+      ) : compact ? (
+        <>
+          <span className="hidden min-[360px]:inline">Déconnexion</span>
+          <span className="min-[360px]:hidden">Quitter</span>
+        </>
+      ) : (
+        'Se déconnecter'
+      )}
     </button>
   );
 }
 
-export function AppShell({ children, userLabel }: AppShellProps) {
+export function AppShell({
+  children,
+  notificationHasMore,
+  notificationLoadError,
+  notificationTotal,
+  notifications,
+  userLabel,
+}: AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const siteId = searchParams.get('site');
+  const planningHref = navigationHref('/tools/planning', siteId);
   const currentSection =
     navigation.find((item) => isCurrentPath(pathname, item.href))?.label ??
     'Planning';
@@ -75,7 +106,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         <Link
           aria-label="Accueil Corsica Linea"
           className="flex h-16 items-center border-b border-zinc-100 px-5"
-          href="/tools/planning"
+          href={planningHref}
         >
           <Image
             alt="Corsica Linea"
@@ -101,7 +132,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
                       ? 'border-red-600 bg-red-50 text-red-700'
                       : 'border-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
                   }`}
-                  href={item.href}
+                  href={navigationHref(item.href, siteId)}
                   key={item.href}
                 >
                   {item.label}
@@ -112,7 +143,14 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         </nav>
 
         <div className="border-t border-zinc-100 p-3">
-          <div className="border border-zinc-200 bg-zinc-50 p-3">
+          <NotificationCenter
+            loadError={notificationLoadError}
+            hasMore={notificationHasMore}
+            notifications={notifications}
+            total={notificationTotal}
+            variant="desktop"
+          />
+          <div className="mt-2 border border-zinc-200 bg-zinc-50 p-3">
             <p className="truncate text-sm font-medium">{userLabel}</p>
             <form action="/logout" className="mt-2" method="post">
               <LogoutButton />
@@ -123,18 +161,18 @@ export function AppShell({ children, userLabel }: AppShellProps) {
 
       <div className="lg:pl-56" data-app-shell-content>
         <header
-          className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-4 backdrop-blur sm:px-6 lg:hidden"
+          className="sticky top-0 z-20 flex h-16 items-center justify-between gap-2 border-b border-zinc-200 bg-white/95 px-3 backdrop-blur sm:px-6 lg:hidden"
           data-app-shell-header
         >
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Link
               aria-label="Accueil Corsica Linea"
               className="shrink-0 lg:hidden"
-              href="/tools/planning"
+              href={planningHref}
             >
               <Image
                 alt="Corsica Linea"
-                className="h-7 w-auto object-contain"
+                className="h-7 w-auto max-w-24 object-contain"
                 height={28}
                 loading="eager"
                 sizes="100px"
@@ -142,12 +180,21 @@ export function AppShell({ children, userLabel }: AppShellProps) {
                 width={100}
               />
             </Link>
-            <p className="text-sm font-semibold">{currentSection}</p>
+            <p className="hidden truncate text-sm font-semibold min-[380px]:block">
+              {currentSection}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <p className="hidden max-w-40 truncate text-sm text-zinc-500 sm:block">
               {userLabel}
             </p>
+            <NotificationCenter
+              loadError={notificationLoadError}
+              hasMore={notificationHasMore}
+              notifications={notifications}
+              total={notificationTotal}
+              variant="mobile"
+            />
             <form action="/logout" method="post">
               <LogoutButton compact />
             </form>
@@ -155,7 +202,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
         </header>
 
         <main
-          className="mx-auto max-w-7xl p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8"
+          className="mx-auto max-w-7xl p-3 pb-24 sm:p-6 sm:pb-24 lg:p-8"
           data-app-shell-main
         >
           {children}
@@ -178,7 +225,7 @@ export function AppShell({ children, userLabel }: AppShellProps) {
                   ? 'border-red-600 bg-red-50 text-red-700'
                   : 'border-transparent text-zinc-500'
               }`}
-              href={item.href}
+              href={navigationHref(item.href, siteId)}
               key={item.href}
             >
               {item.mobileLabel}

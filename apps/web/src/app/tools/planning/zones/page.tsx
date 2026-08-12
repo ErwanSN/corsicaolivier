@@ -10,6 +10,7 @@ type ZonesPageProps = Readonly<{
     add?: string;
     error?: string;
     saved?: string;
+    site?: string;
   }>;
 }>;
 
@@ -18,6 +19,9 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
   const sitesResult = await apiFetch<Site[]>('/sites');
   const sites = orderSites(sitesResult.data ?? []);
   const organizationId = sites.at(0)?.organization_id;
+  const selectedSiteId =
+    sites.find((site) => site.id === params.site)?.id ?? sites.at(0)?.id ?? '';
+  const zonesHref = `/tools/planning/zones?site=${encodeURIComponent(selectedSiteId)}`;
 
   return (
     <div className="space-y-4">
@@ -31,7 +35,7 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
           </p>
         </div>
         {organizationId && !params.add ? (
-          <Link className="primary-button" href="/tools/planning/zones?add=1">
+          <Link className="primary-button" href={`${zonesHref}&add=1`}>
             Créer une zone de travail
           </Link>
         ) : null}
@@ -57,7 +61,7 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
             <h2 className="text-lg font-semibold">Créer une zone</h2>
             <Link
               className="text-sm font-medium text-zinc-500 hover:text-zinc-950"
-              href="/tools/planning/zones"
+              href={zonesHref}
             >
               Annuler et revenir à la liste
             </Link>
@@ -67,6 +71,7 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
             className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
           >
             <input name="organizationId" type="hidden" value={organizationId} />
+            <input name="siteId" type="hidden" value={selectedSiteId} />
             <div className="min-w-0 flex-1 space-y-1.5">
               <label className="field-label" htmlFor="zoneName">
                 Nom de la zone

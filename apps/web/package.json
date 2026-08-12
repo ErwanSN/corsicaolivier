@@ -1,5 +1,5 @@
 {
-  "name": "@olivier/web",
+  "name": "@corsica/planning-web",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,9 @@
     "dev": "next dev",
     "lint": "eslint . --max-warnings=0",
     "start": "next start",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs tests/*.test.ts",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:real-auth": "playwright test --config playwright.real-auth.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,15 +18,18 @@
     "@supabase/supabase-js": "^2.110.7",
     "next": "^16.2.11",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.10",
+    "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
   }

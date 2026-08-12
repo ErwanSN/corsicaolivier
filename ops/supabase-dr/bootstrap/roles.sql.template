@@ -1,0 +1,24 @@
+\set ON_ERROR_STOP on
+\getenv dr_postgres_password POSTGRES_PASSWORD
+
+\if :{?dr_postgres_password}
+SELECT octet_length(:'dr_postgres_password') >= 16 AS dr_postgres_password_valid \gset
+\else
+\warn 'FATAL: POSTGRES_PASSWORD est obligatoire pour le bootstrap DR.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+\if :dr_postgres_password_valid
+\else
+\warn 'FATAL: POSTGRES_PASSWORD doit contenir au moins 16 octets.'
+SELECT 1 / 0 AS dr_bootstrap_guard;
+\endif
+
+ALTER USER authenticator WITH PASSWORD :'dr_postgres_password';
+ALTER USER pgbouncer WITH PASSWORD :'dr_postgres_password';
+ALTER USER supabase_auth_admin WITH PASSWORD :'dr_postgres_password';
+ALTER USER supabase_functions_admin WITH PASSWORD :'dr_postgres_password';
+ALTER USER supabase_storage_admin WITH PASSWORD :'dr_postgres_password';
+
+\unset dr_postgres_password
+\unset dr_postgres_password_valid

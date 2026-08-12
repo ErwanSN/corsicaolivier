@@ -1,6 +1,6 @@
 import { SetMetadata } from '@nestjs/common';
 
-import type { AppRole } from '../database/database.types';
+import type { AppRole } from '../database/database.aliases';
 
 export const REQUIRED_ROLES = 'requiredRoles';
 

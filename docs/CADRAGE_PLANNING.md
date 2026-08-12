@@ -1,10 +1,10 @@
-# Cadrage produit et architecture - Tools Panel / Planning
+# Cadrage produit et architecture - Plateforme Planning
 
 Statut : document de découverte, à valider avec les équipes métier, RH, DSI et DPO.
 
 ## 1. Vision
 
-Tools Panel doit devenir le point d'entrée sécurisé des outils internes Corsica Linea.
+La plateforme doit devenir le point d'entrée sécurisé des outils internes Corsica Linea.
 Le premier outil, Planning, doit transformer les programmes d'escales et les prévisions
 de charge en besoins opérationnels, puis aider les planificateurs à affecter les agents
 dans le respect des contraintes légales, contractuelles, opérationnelles et humaines.
@@ -26,11 +26,10 @@ même shift sans que ses heures soient comptées plusieurs fois.
 
 ### 2.1 Sources analysées
 
-- `corpus/feuillesviergesdepostes/CA Janet.xls` ;
-- `corpus/feuillesviergesdepostes/Maquette CA + fret.xls` ;
-- trois semaines remplies du 4 au 24 mai 2026 ;
-- un état de prévisions passagers et véhicules par port ;
-- un programme hebdomadaire des navires.
+Le cadrage initial s’appuie sur des feuilles hebdomadaires de postes, des semaines
+remplies, des prévisions de charge par port et un programme navires fournis par le
+métier. Ces sources peuvent contenir des données personnelles et restent désormais
+hors de Git, dans un stockage à accès contrôlé.
 
 ### 2.2 Organisation actuelle
 
@@ -64,7 +63,7 @@ identifier. L'import Excel/PDF ne doit être qu'un mécanisme transitoire ou de 
 
 ## 3. Périmètre fonctionnel de la plateforme
 
-Tools Panel doit fournir une fondation commune à tous les futurs outils :
+La plateforme doit fournir une fondation commune à tous les futurs outils :
 
 - authentification d'entreprise ;
 - catalogue des outils autorisés pour l'utilisateur ;
@@ -491,7 +490,7 @@ Cette phase doit déjà remplacer Excel sans dépendre d'un solveur automatique.
 - approbation, notifications et accusés ;
 - exercices de retard, avance et annulation.
 
-### Phase 5 - Industrialisation du Tools Panel
+### Phase 5 - Industrialisation de la plateforme
 
 - catalogue extensible ;
 - gouvernance des nouveaux outils ;

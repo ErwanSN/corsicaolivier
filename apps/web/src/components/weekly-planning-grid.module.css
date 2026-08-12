@@ -47,7 +47,7 @@
 
 .searchControl input {
   width: 100%;
-  height: 2.15rem;
+  min-height: 2.75rem;
   border: 1px solid #71717a;
   background: #ffffff;
   padding: 0 0.75rem;
@@ -63,6 +63,7 @@
 
 .searchControl button {
   min-width: 4.5rem;
+  min-height: 2.75rem;
   border: 1px solid #71717a;
   border-left: 0;
   background: #f4f4f5;
@@ -153,6 +154,12 @@
   overflow: auto;
   max-height: calc(100svh - 8rem);
   overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.weekViewport:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: -3px;
 }
 
 .weekGrid {
@@ -346,8 +353,8 @@
   top: 0.2rem;
   right: 0.2rem;
   z-index: 4;
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 1px dashed #969696;
   background: #ffffff;
   color: #52525b;
@@ -408,7 +415,8 @@
   min-width: 0;
   flex-direction: column;
   gap: 0.08rem;
-  padding: 0.38rem 1.65rem 0.38rem 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.38rem 3rem 0.38rem 0.45rem;
   border: 0;
   background: transparent;
   color: inherit;
@@ -426,7 +434,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 1.4rem;
+  width: 2.75rem;
   height: 100%;
   padding: 0;
   border: 0;
@@ -460,6 +468,7 @@
 .searchMatch {
   position: relative;
   z-index: 2;
+  scroll-margin: 8rem;
   outline: 3px solid #dc2626;
 }
 
@@ -525,6 +534,11 @@
     min-width: 0;
   }
 
+  .agentSearch {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .weekViewport {
     max-height: none;
   }
@@ -543,6 +557,30 @@
   .positionLabel,
   .positionCell {
     min-height: 4rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .agentSearch {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .agentSearch p {
+    min-height: 1rem;
+  }
+
+  .weekGrid {
+    grid-template-columns: 6.5rem repeat(7, 6.75rem);
+    min-width: 53.75rem;
+  }
+
+  .cornerHeader,
+  .dayColumnHeader,
+  .positionLabel,
+  .positionCell {
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
   }
 }
 

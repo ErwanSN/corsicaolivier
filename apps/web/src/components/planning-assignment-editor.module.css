@@ -11,6 +11,7 @@
   width: min(34rem, 100%);
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-left: 2px solid #18181b;
   background: #ffffff;
 }
@@ -44,14 +45,24 @@
 
 .closeButton {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 1px solid #a1a1aa;
   background: #ffffff;
   color: #18181b;
   font-size: 1.5rem;
   line-height: 1;
+}
+
+.panel:focus-visible,
+.closeButton:focus-visible,
+.agentSearch button:focus-visible,
+.advancedService button:focus-visible,
+.confirmDeleteButton:focus-visible,
+.deleteButton:focus-visible {
+  outline: 3px solid #dc2626;
+  outline-offset: 2px;
 }
 
 .form {
@@ -76,6 +87,11 @@
   font-size: 0.68rem;
 }
 
+.field .recommendationHint {
+  color: #166534;
+  font-weight: 750;
+}
+
 .agentSearch {
   display: flex;
 }
@@ -86,6 +102,7 @@
 
 .agentSearch button {
   min-width: 4.5rem;
+  min-height: 2.75rem;
   border: 1px solid #71717a;
   border-left: 0;
   background: #f4f4f5;
@@ -97,6 +114,12 @@
 .agentResultCount {
   color: #71717a;
   font-size: 0.68rem;
+}
+
+.agentSearchError {
+  color: #991b1b;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .timeGrid {
@@ -112,6 +135,104 @@
   color: #000000;
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.advancedService {
+  border: 1px solid #a1a1aa;
+  background: #fafafa;
+}
+
+.advancedService > summary {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  color: #27272a;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.advancedService > summary span {
+  color: #71717a;
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.advancedBody {
+  display: grid;
+  gap: 1rem;
+  padding: 0 0.8rem 0.8rem;
+  border-top: 1px solid #d4d4d8;
+}
+
+.advancedSection {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.8rem;
+}
+
+.advancedSection + .advancedSection {
+  border-top: 1px solid #d4d4d8;
+}
+
+.advancedHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.advancedHeading > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.advancedHeading strong {
+  font-size: 0.75rem;
+}
+
+.advancedHeading small,
+.advancedEmpty {
+  color: #71717a;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.advancedHeading button,
+.removeAdvancedRow {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #71717a;
+  background: #ffffff;
+  color: #27272a;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.advancedRow,
+.breakRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+}
+
+.advancedRow > .field:nth-child(3),
+.breakRow > .field:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.removeAdvancedRow {
+  justify-self: end;
+  border-color: #b91c1c;
+  color: #991b1b;
 }
 
 .lastMinuteChange {
@@ -218,8 +339,34 @@
 }
 
 @media (max-width: 560px) {
+  .header,
+  .form {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
   .timeGrid {
     grid-template-columns: 1fr;
+  }
+
+  .advancedService > summary,
+  .advancedHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .advancedService > summary span {
+    text-align: left;
+  }
+
+  .advancedRow,
+  .breakRow {
+    grid-template-columns: 1fr;
+  }
+
+  .advancedRow > .field:nth-child(3),
+  .breakRow > .field:nth-child(3) {
+    grid-column: auto;
   }
 
   .footer {

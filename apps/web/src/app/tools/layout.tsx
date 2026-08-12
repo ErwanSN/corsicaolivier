@@ -2,13 +2,15 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import { AppShell } from '../../components/app-shell';
-import { getPublicSupabaseConfig } from '../../lib/supabase/config';
+import { apiFetch } from '../../lib/api/server';
+import type { AgentNotificationPage } from '../../lib/api/types';
+import { getServerSupabaseConfig } from '../../lib/supabase/config';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 
 type ToolsLayoutProps = Readonly<{ children: ReactNode }>;
 
 export default async function ToolsLayout({ children }: ToolsLayoutProps) {
-  const config = getPublicSupabaseConfig();
+  const config = getServerSupabaseConfig();
 
   if (!config) {
     return (
@@ -29,13 +31,25 @@ export default async function ToolsLayout({ children }: ToolsLayoutProps) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = (await supabase?.auth.getUser()) ?? {
-    data: { user: null },
-    error: null,
-  };
+  let identity;
+  let assurance;
+  try {
+    identity = (await supabase?.auth.getUser()) ?? {
+      data: { user: null },
+      error: null,
+    };
+    assurance = await supabase?.auth.mfa.getAuthenticatorAssuranceLevel();
+  } catch {
+    redirect('/mfa');
+  }
+  const { data, error } = identity;
 
   if (error || !data.user) {
     redirect('/login');
+  }
+
+  if (assurance?.error || assurance?.data.currentLevel !== 'aal2') {
+    redirect('/mfa');
   }
 
   const label =
@@ -44,5 +58,19 @@ export default async function ToolsLayout({ children }: ToolsLayoutProps) {
     data.user.email ??
     'Utilisateur';
 
-  return <AppShell userLabel={String(label)}>{children}</AppShell>;
+  const notificationsResult = await apiFetch<AgentNotificationPage>(
+    '/notifications?pageSize=30&unreadOnly=true',
+  );
+
+  return (
+    <AppShell
+      notificationLoadError={Boolean(notificationsResult.error)}
+      notificationHasMore={notificationsResult.data?.hasMore ?? false}
+      notifications={notificationsResult.data?.items ?? []}
+      notificationTotal={notificationsResult.data?.total ?? 0}
+      userLabel={String(label)}
+    >
+      {children}
+    </AppShell>
+  );
 }

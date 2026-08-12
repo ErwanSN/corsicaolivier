@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import type { AppRole } from '../database/database.types';
+import type { AppRole } from '../database/database.aliases';
 import { AccessControlService } from './access-control.service';
 import type { AuthenticatedRequest } from './auth-context';
 import { REQUIRED_ROLES } from './require-roles.decorator';

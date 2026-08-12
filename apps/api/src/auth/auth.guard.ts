@@ -45,9 +45,12 @@ export class AuthGuard implements CanActivate {
     if (
       !UUID_PATTERN.test(claims.sub) ||
       claims.role !== 'authenticated' ||
-      claims.is_anonymous === true
+      claims.is_anonymous === true ||
+      claims.aal !== 'aal2'
     ) {
-      throw new UnauthorizedException('Identité authentifiée invalide.');
+      throw new UnauthorizedException(
+        'Une authentification à deux facteurs est requise.',
+      );
     }
 
     request.auth = {
