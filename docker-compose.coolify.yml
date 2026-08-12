@@ -40,6 +40,10 @@ services:
       CORS_ORIGIN: ${WEB_PUBLIC_URL:?public web URL required}
       SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?publishable Supabase key required}
+      # Coolify adds its global .env file to every Compose service. Explicit
+      # empty overrides prevent runtime-only secrets from reaching the API.
+      SUPABASE_SERVICE_ROLE_KEY: ''
+      SUPABASE_AUTH_RATE_LIMIT_SECRET: ''
     healthcheck:
       test:
         - CMD
@@ -88,6 +92,9 @@ services:
       # empty value at startup; keeping the default here prevents Coolify from
       # turning the service-role key into a Docker build argument.
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      # The HMAC belongs to the web process only; override Coolify's global
+      # env_file injection for this worker.
+      SUPABASE_AUTH_RATE_LIMIT_SECRET: ''
       OUTBOX_HEALTH_FILE: /tmp/corsica-outbox-worker.heartbeat
       OUTBOX_HEALTH_MAX_AGE_MS: 180000
     healthcheck:
@@ -150,6 +157,9 @@ services:
       # Runtime-only for the same reason as the worker key above. Production
       # startup fails closed when this secret is absent or empty.
       SUPABASE_AUTH_RATE_LIMIT_SECRET: ${SUPABASE_AUTH_RATE_LIMIT_SECRET:-}
+      # The privileged database key belongs to the worker only. Coolify's
+      # global env_file is deliberately overridden for this service.
+      SUPABASE_SERVICE_ROLE_KEY: ''
       # Server-side only: resolved over the internal Coolify network.
       API_URL: http://api:3001
     healthcheck:

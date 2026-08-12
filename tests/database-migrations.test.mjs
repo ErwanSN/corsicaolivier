@@ -638,9 +638,14 @@ test('le déploiement isole strictement le secret du worker', async () => {
   assert.ok(apiBlock, 'service API absent de la composition');
   assert.ok(workerBlock, 'service worker absent de la composition');
   assert.ok(webBlock, 'service web absent de la composition');
-  assert.doesNotMatch(apiBlock, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.doesNotMatch(webBlock, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(workerBlock, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(apiBlock, /SUPABASE_SERVICE_ROLE_KEY: ""/);
+  assert.match(webBlock, /SUPABASE_SERVICE_ROLE_KEY: ""/);
+  assert.match(
+    workerBlock,
+    /SUPABASE_SERVICE_ROLE_KEY: \$\{SUPABASE_SERVICE_ROLE_KEY:-\}/,
+  );
+  assert.match(apiBlock, /SUPABASE_AUTH_RATE_LIMIT_SECRET: ""/);
+  assert.match(workerBlock, /SUPABASE_AUTH_RATE_LIMIT_SECRET: ""/);
   assert.match(workerBlock, /dist\/worker\.js/);
   assert.match(workerBlock, /dist\/worker-health\.js/);
   assert.doesNotMatch(workerBlock, /ports:|SERVICE_FQDN/);
