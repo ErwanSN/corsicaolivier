@@ -134,6 +134,21 @@ services:
       options:
         max-size: 10m
         max-file: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.corsica-planning-http.entrypoints=http
+      - traefik.http.routers.corsica-planning-http.rule=Host(`corsica.skynet-initiative.com`)
+      - traefik.http.routers.corsica-planning-http.middlewares=corsica-planning-https
+      - traefik.http.routers.corsica-planning-http.service=corsica-planning
+      - traefik.http.routers.corsica-planning-https.entrypoints=https
+      - traefik.http.routers.corsica-planning-https.rule=Host(`corsica.skynet-initiative.com`)
+      - traefik.http.routers.corsica-planning-https.tls=true
+      - traefik.http.routers.corsica-planning-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.corsica-planning-https.service=corsica-planning
+      - traefik.http.middlewares.corsica-planning-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.corsica-planning-https.redirectscheme.permanent=true
+      - traefik.http.services.corsica-planning.loadbalancer.server.port=3000
     networks:
       - default
       - coolify

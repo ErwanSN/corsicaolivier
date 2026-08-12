@@ -87,6 +87,16 @@ test('le backplane Auth relie uniquement le web et exige ses secrets runtime', a
     /SUPABASE_AUTH_RATE_LIMIT_SECRET: \$\{SUPABASE_AUTH_RATE_LIMIT_SECRET:-\}/,
   );
   assert.match(webService, /SUPABASE_SERVICE_ROLE_KEY: (?:''|"")/);
+  assert.match(webService, /traefik\.enable=true/);
+  assert.match(webService, /traefik\.docker\.network=coolify/);
+  assert.match(
+    webService,
+    /traefik\.http\.routers\.corsica-planning-https\.rule=Host\(`corsica\.skynet-initiative\.com`\)/,
+  );
+  assert.match(
+    webService,
+    /traefik\.http\.services\.corsica-planning\.loadbalancer\.server\.port=3000/,
+  );
   assert.doesNotMatch(
     webService.split('\n    environment:\n')[0],
     /SUPABASE_AUTH_RATE_LIMIT_SECRET/,
