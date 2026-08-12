@@ -83,7 +83,11 @@ services:
     environment:
       NODE_ENV: production
       SUPABASE_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?worker service role key required}
+      # Coolify evaluates this Compose file once during `docker compose build`,
+      # before runtime-only secrets exist. The worker config still rejects an
+      # empty value at startup; keeping the default here prevents Coolify from
+      # turning the service-role key into a Docker build argument.
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       OUTBOX_HEALTH_FILE: /tmp/corsica-outbox-worker.heartbeat
       OUTBOX_HEALTH_MAX_AGE_MS: 180000
     healthcheck:
@@ -143,7 +147,9 @@ services:
       SUPABASE_SERVER_URL: ${SUPABASE_INTERNAL_URL:?internal Supabase URL required}
       # Direct GoTrue route used only for signed per-identity rate-limit keys.
       SUPABASE_AUTH_INTERNAL_URL: ${SUPABASE_AUTH_INTERNAL_URL:?direct internal GoTrue URL required}
-      SUPABASE_AUTH_RATE_LIMIT_SECRET: ${SUPABASE_AUTH_RATE_LIMIT_SECRET:?Auth rate-limit HMAC secret required}
+      # Runtime-only for the same reason as the worker key above. Production
+      # startup fails closed when this secret is absent or empty.
+      SUPABASE_AUTH_RATE_LIMIT_SECRET: ${SUPABASE_AUTH_RATE_LIMIT_SECRET:-}
       # Server-side only: resolved over the internal Coolify network.
       API_URL: http://api:3001
     healthcheck:

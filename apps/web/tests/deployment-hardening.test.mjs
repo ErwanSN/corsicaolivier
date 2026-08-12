@@ -79,7 +79,7 @@ test('le backplane Auth relie uniquement le web et exige ses secrets runtime', a
   );
   assert.match(
     webService,
-    /SUPABASE_AUTH_RATE_LIMIT_SECRET: \$\{SUPABASE_AUTH_RATE_LIMIT_SECRET:\?[^}]+\}/,
+    /SUPABASE_AUTH_RATE_LIMIT_SECRET: \$\{SUPABASE_AUTH_RATE_LIMIT_SECRET:-\}/,
   );
   assert.doesNotMatch(
     webService.split('\n    environment:\n')[0],
